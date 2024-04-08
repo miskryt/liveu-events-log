@@ -1,0 +1,15 @@
+{
+    "name": "solvd/liveu-events-log",
+    "autoload": {
+        "psr-4": {
+            "LiveuEventsLog\\": "src/"
+        }
+    },
+    "require": {
+        "adaptive/php-text-difference": "^1.1"
+    }
+    ,
+    "require-dev": {
+        "roave/security-advisories": "dev-latest"
+    }
+}
