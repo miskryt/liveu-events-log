@@ -39,6 +39,7 @@ class Plugin {
 		$this->set_menu_notificators();
 	}
 
+
 	public function get_events_list_callback() {
 		$result = $this->model->get_events_list();
 		echo ($result);
@@ -85,6 +86,9 @@ class Plugin {
 
 	public function enqueue_admin_styles() {
 		wp_enqueue_style('datatables', LEVLOG_PLUGIN_URL. '/assets/admin/css/datatables.min.css');
+		wp_enqueue_style('fontawesome', LEVLOG_PLUGIN_URL. '/assets/admin/fontawesome/css/fontawesome.css');
+		wp_enqueue_style('fontawesome-brands', LEVLOG_PLUGIN_URL. '/assets/admin/fontawesome/css/brands.css');
+		wp_enqueue_style('fontawesome-solid', LEVLOG_PLUGIN_URL. '/assets/admin/fontawesome/css/solid.css');
 	}
 
 	public function init_admin_menu() {

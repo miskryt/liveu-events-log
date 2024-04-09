@@ -33,7 +33,11 @@ class Model {
 				"id" => $td->id,
 				"user" => get_user_by('id', $td->user_id)->user_login,
 				"action" => EnumActions::get($td->action),
-				"post_url" => '<a href="'.admin_url( 'post.php?post=' . $td->post_id ) . '" &action=edit>'. get_post($td->post_id)->post_title. '</a>',
+				"post_url" =>
+					'<a  href="?page=liveu-events&action=show_diff&diff_id='.$td->id.'">'.
+					get_post($td->post_id)->post_title.
+					'</a>&nbsp;<a target="_blank" href="'.get_edit_post_link( $td->post_id).'"><i class="fa-solid fa-share-from-square"></i></a>',
+
 				"datetime" => $td->date,
 				"post_type" => $td->post_type,
 				"new" => $td->new,

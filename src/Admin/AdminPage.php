@@ -20,6 +20,12 @@ class AdminPage
 	    	'title' => 'Admin page',
 			'new_count' => $this->model->records_count()
 		];
-		$this->viewer->render('templates/admin', $data);
+
+	    if(isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'show_diff')
+		{
+			$this->viewer->render('templates/diff', $data);
+		}
+		else
+			$this->viewer->render('templates/admin', $data);
 	}
 }
