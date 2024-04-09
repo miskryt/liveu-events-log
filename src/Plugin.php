@@ -1,20 +1,26 @@
 <?php
 namespace LiveuEventsLog;
 
+use LiveuEventsLog\Admin\AdminPage;
 use LiveuEventsLog\Admin\Model\Model;
 use LiveuEventsLog\Admin\View\View;
 use LiveuEventsLog\Config\Config;
+use LiveuEventsLog\Services\AdminPageLoader;
 
 class Plugin {
 
 	protected $notification_count;
 	private Model $model;
 	private Config $config;
+	private $admin_page;
 
 	public function __construct() {
 		$this->notification_count = 0;
 		$this->model = new Model();
-		$this->config = new Config();
+		$this->view = new View();
+		$this->config = Config::get_instance();
+		$this->admin_page = new AdminPage($this->model, $this->view);
+
 
 		//$slack = true;
 		//$email = true;
@@ -28,8 +34,12 @@ class Plugin {
 	}
 
 	public function run() {
+		add_action('init', [$this, 'init']);
+	}
+
+	public function init() {
 		if( wp_doing_ajax() )
-			add_action('wp_ajax_get_data', [$this, 'get_events_list_callback']);
+			add_action('wp_ajax_get_data', [$this->admin_page, 'get_events_list_callback']);
 
 		add_action('admin_menu', [$this, 'init_admin_menu'], 10, 2);
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts'], 10, 3);
@@ -38,14 +48,6 @@ class Plugin {
 		$this->load_services($this->get_services());
 		$this->set_menu_notificators();
 	}
-
-
-	public function get_events_list_callback() {
-		$result = $this->model->get_events_list();
-		echo ($result);
-		wp_die();
-	}
-
 
 	private function get_services(){
 		return $this->config->get_services();
@@ -65,7 +67,7 @@ class Plugin {
 	}
 
 	private function set_menu_notificators() {
-		$this->notification_count = $this->model->records_count();
+		$this->notification_count = $this->model->get_records_count();
 	}
 
 	public function enqueue_admin_scripts($hook) {
@@ -86,9 +88,8 @@ class Plugin {
 
 	public function enqueue_admin_styles() {
 		wp_enqueue_style('datatables', LEVLOG_PLUGIN_URL. '/assets/admin/css/datatables.min.css');
-		wp_enqueue_style('fontawesome', LEVLOG_PLUGIN_URL. '/assets/admin/fontawesome/css/fontawesome.css');
-		wp_enqueue_style('fontawesome-brands', LEVLOG_PLUGIN_URL. '/assets/admin/fontawesome/css/brands.css');
-		wp_enqueue_style('fontawesome-solid', LEVLOG_PLUGIN_URL. '/assets/admin/fontawesome/css/solid.css');
+		wp_enqueue_style('iconoir', 'https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css');
+		wp_enqueue_style('plugin-css', LEVLOG_PLUGIN_URL. '/assets/admin/css/plugin.css');
 	}
 
 	public function init_admin_menu() {
@@ -98,8 +99,8 @@ class Plugin {
 			$this->notification_count ? sprintf('Events History <span class="awaiting-mod">%d</span>', $this->notification_count) : 'Events History',
 			'manage_options',
 			'liveu-events',
-			[new Admin\AdminPage($this->model, new View), 'show'],
-			plugin_dir_url(__FILE__) . 'images/icon_wporg.png',
+			[$this->admin_page, 'show'],
+			'dashicons-editor-ul',
 			2
 		);
 

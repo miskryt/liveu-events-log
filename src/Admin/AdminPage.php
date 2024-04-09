@@ -2,30 +2,37 @@
 
 namespace LiveuEventsLog\Admin;
 
-use LiveuEventsLog\Admin\Model\Model;
+use LiveuEventsLog\Admin\Interfaces\IModel;
+use LiveuEventsLog\Admin\Interfaces\IView;
 
 class AdminPage
 {
-	private Model $model;
-	private IView $viewer;
+	private static IModel $model;
+	private static IView $viewer;
 
-	public function __construct(Model $model, IView $viewer) {
-		$this->model = $model;
-		$this->viewer = $viewer;
+	public function __construct(IModel $model, IView $viewer) {
+		self::$model = $model;
+		self::$viewer = $viewer;
 	}
 
+	public function get_events_list_callback() {
+		$result = self::$model->get_events_list();
 
-	public function show() {
+		echo json_encode($result, JSON_THROW_ON_ERROR);
+		wp_die();
+	}
+
+	public static function show(): void {
 	    $data = [
 	    	'title' => 'Admin page',
-			'new_count' => $this->model->records_count()
+			'new_count' => self::$model->get_records_count()
 		];
 
 	    if(isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'show_diff')
 		{
-			$this->viewer->render('templates/diff', $data);
+			self::$viewer->render('templates/diff', $data);
 		}
 		else
-			$this->viewer->render('templates/admin', $data);
+			self::$viewer->render('templates/admin', $data);
 	}
 }

@@ -1,6 +1,7 @@
 <?php
 
 namespace LiveuEventsLog;
+
 /**
  * Plugin Name: LiveuEventsLog
  * Plugin URI: https://example.com/
