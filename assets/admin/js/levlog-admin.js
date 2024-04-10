@@ -4,7 +4,8 @@ $ = jQuery;
 
 $(document).ready( function () {
 
-    let table = new DataTable('#liveu_events_table', {
+    new DataTable('#liveu_events_table', {
+
         ajax: {
             url: '/wp-admin/admin-ajax.php',
             data: function (d) {
@@ -14,10 +15,11 @@ $(document).ready( function () {
         },
         processing: true,
         serverSide: true,
+
         columns: [
             {
                 data: "id",
-                visible: false
+                visible: true
             },
             {
                 data: 'user',
@@ -40,6 +42,17 @@ $(document).ready( function () {
                 visible: false
             }
         ],
+        responsive: {
+            details: {
+                display: DataTable.Responsive.display.modal({
+                    header: function (row) {
+                        var data = row.data();
+                        return 'Details for ' + data[0] + ' ' + data[1];
+                    }
+                }),
+                renderer: DataTable.Responsive.renderer.tableAll()
+            }
+        }
     });
 
 

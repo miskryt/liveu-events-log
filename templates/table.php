@@ -2,10 +2,10 @@
 //echo $data['title'] ?? '';
 ?>
 
-<table id="liveu_events_table" class="row-border" >
+<table id="liveu_events_table" class="display nowrap table table-striped" >
 	<thead>
 	<tr>
-        <th></th>
+        <th>id</th>
         <th>User</th>
         <th>Action</th>
         <th>Post Url</th>

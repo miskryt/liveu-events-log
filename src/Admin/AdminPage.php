@@ -4,35 +4,91 @@ namespace LiveuEventsLog\Admin;
 
 use LiveuEventsLog\Admin\Interfaces\IModel;
 use LiveuEventsLog\Admin\Interfaces\IView;
+use LiveuEventsLog\EnumActions;
 
 class AdminPage
 {
-	private static IModel $model;
-	private static IView $viewer;
+	private IModel $model;
+	private IView $viewer;
 
 	public function __construct(IModel $model, IView $viewer) {
-		self::$model = $model;
-		self::$viewer = $viewer;
+		$this->model = $model;
+		$this->viewer = $viewer;
 	}
 
 	public function get_events_list_callback() {
-		$result = self::$model->get_events_list();
+		check_ajax_referer( 'myajax-nonce', 'nonce_code' );
 
-		echo json_encode($result, JSON_THROW_ON_ERROR);
+		$search = $_REQUEST['search'] ?? '';
+		$start  = $_REQUEST['start']  ?? 0;
+		$length = $_REQUEST['length'] ?? 10;
+		$draw   = $_REQUEST['draw']   ?? 1;
+
+		$params = [
+			'search' => $search,
+			'start'  => $start,
+			'length' => $length,
+			'draw'   => $draw
+		];
+
+		$events_list = $this->model->get_events_list($params);
+		$events_count = $this->model->get_events_count();
+
+		$data = $this->prepare_response($events_list);
+
+		$result['data'] = $data;
+		$result['draw'] = $draw;
+		$result['recordsTotal'] = $events_count;
+		$result['recordsFiltered'] = $events_count;
+
+		echo json_encode($result);
 		wp_die();
+
 	}
 
-	public static function show(): void {
-	    $data = [
-	    	'title' => 'Admin page',
-			'new_count' => self::$model->get_records_count()
+	public function show(): void {
+		$data = [
+			'title' => 'Admin Page'
 		];
 
 	    if(isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'show_diff')
 		{
-			self::$viewer->render('templates/diff', $data);
+			$this->viewer->render('templates/diff', $data);
 		}
 		else
-			self::$viewer->render('templates/admin', $data);
+		{
+			$this->viewer->render('templates/admin', $data);
+		}
+	}
+
+	/**
+	 * @param array $events_list
+	 * @param array $data
+	 * @return array
+	 */
+	private function prepare_response (array $events_list): array
+	{
+		$data = [];
+
+		foreach ($events_list as $event)
+		{
+
+			$d = [
+				"id" => $event->id,
+				"user" => get_user_by('id', $event->user_id)->user_login,
+				"action" => EnumActions::get($event->action),
+				"post_url" =>
+					'<a  href="?page=liveu-events&action=show_diff&diff_id=' . $event->id . '">' .
+					get_post($event->post_id)->post_title .
+					'</a>&nbsp;<a target="_blank" href="' . get_edit_post_link($event->post_id) . '"><i class="levlog-list-share-icon iconoir-open-in-window"></i></a>',
+
+				"datetime" => $event->date,
+				"post_type" => $event->post_type,
+				"new" => $event->new,
+			];
+
+			$data[] = $d;
+		}
+		return $data;
 	}
 }

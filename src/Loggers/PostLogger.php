@@ -9,7 +9,7 @@ class PostLogger extends Logger
 	protected $old_post_data = array();
 
 	public function __construct() {
-		add_action( 'init', array( $this, 'add_rest_hooks' ), 99 );
+		add_action( 'init', array( $this, 'add_rest_hooks' ), 10, 2 );
 	}
 
 	public function add_rest_hooks() {
