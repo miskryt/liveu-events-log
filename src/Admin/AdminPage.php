@@ -11,9 +11,9 @@ class AdminPage
 	private IModel $model;
 	private IView $viewer;
 
-	public function __construct(IModel $model, IView $viewer) {
-		$this->model = $model;
-		$this->viewer = $viewer;
+	public function __construct() {
+		$this->model = new Model\Model();
+		$this->viewer = new View\View();
 	}
 
 	public function get_events_list_callback() {
@@ -53,12 +53,21 @@ class AdminPage
 
 	    if(isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'show_diff')
 		{
+			$diff = $this->get_diff_by_id((int)$_REQUEST['event_id']);
 			$this->viewer->render('templates/diff', $data);
 		}
 		else
 		{
 			$this->viewer->render('templates/admin', $data);
 		}
+	}
+
+	private function get_diff_by_id (int $event_id) : array {
+		if($event_id === 0) return [];
+
+		$event_data = $this->model->get_event_data_by_id($event_id);
+
+		var_dump($event_data); die();
 	}
 
 	/**
@@ -78,7 +87,7 @@ class AdminPage
 				"user" => get_user_by('id', $event->user_id)->user_login,
 				"action" => EnumActions::get($event->action),
 				"post_url" =>
-					'<a  href="?page=liveu-events&action=show_diff&diff_id=' . $event->id . '">' .
+					'<a  href="?page=liveu-events&action=show_diff&event_id=' . $event->id . '">' .
 					get_post($event->post_id)->post_title .
 					'</a>&nbsp;<a target="_blank" href="' . get_edit_post_link($event->post_id) . '"><i class="levlog-list-share-icon iconoir-open-in-window"></i></a>',
 

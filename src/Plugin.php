@@ -10,39 +10,48 @@ use function Crontrol\Schedule\add;
 
 class Plugin {
 
-	protected $notification_count;
 	private Model $model;
 	private Config $config;
-	private $admin_page;
+
 
 	public function __construct() {
-		$this->notification_count = 0;
 		$this->model = new Model();
 		$this->view = new View();
 		$this->config = Config::get_instance();
-		$this->admin_page = new AdminPage($this->model, $this->view);
+
+		$this->load_services($this->get_services());
 	}
 
 	public function run() {
-		if( wp_doing_ajax() )
-			add_action('wp_ajax_get_data', [$this->admin_page, 'get_events_list_callback']);
 
-		add_action('admin_menu', [$this, 'init_admin_menu'], 10, 2);
+
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts'], 10, 3);
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_styles'], 10, 3);
-		add_action('admin_init', [$this, 'plugin_settings_init']);
 
-		$this->load_services($this->get_services());
-		$this->set_menu_notificators();
+
+
+
+		add_action( 'admin_menu', [$this, 'add_user_menu_bubble'], 10, 3 );
+	}
+
+	public function add_user_menu_bubble(){
+		global $menu;
+
+		$notification_count = $this->model->get_events_count();
+
+		if( $notification_count ){
+			foreach( $menu as $key => $value ){
+				if( $menu[$key][2] === 'liveu-events' ){
+					$menu[$key][0] .= ' <span class="awaiting-mod"><span class="pending-count">' . $notification_count . '</span></span>';
+					break;
+				}
+			}
+		}
 	}
 
 
 	private function get_services(){
 		return $this->config->get_services();
-	}
-
-	public function plugin_settings_init() {
-		//todo add settings init
 	}
 
 	private function load_services($services) {
@@ -59,7 +68,7 @@ class Plugin {
 	}
 
 	private function set_menu_notificators() {
-		$this->notification_count = $this->model->get_events_count();
+
 	}
 
 	public function enqueue_admin_scripts($hook) {
@@ -84,29 +93,4 @@ class Plugin {
 		wp_enqueue_style('plugin-css', LEVLOG_PLUGIN_URL. '/assets/admin/css/plugin.css');
 	}
 
-	public function init_admin_menu() {
-
-		add_menu_page(
-			'Events History',
-			$this->notification_count ? sprintf('Events History <span class="awaiting-mod">%d</span>', $this->notification_count) : 'Events History',
-			'manage_options',
-			'liveu-events',
-			[$this->admin_page, 'show'],
-			'dashicons-editor-ul',
-			2
-		);
-
-		add_submenu_page(
-			'liveu-events',
-			'Settings',
-			'Settings',
-			'manage_options',
-			'liveu-events-options',
-			[$this, 'init_options_page']
-		);
-	}
-
-	public function init_options_page() {
-		echo "settings page";
-	}
 }
