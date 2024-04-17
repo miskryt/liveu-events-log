@@ -42,7 +42,7 @@ class Config
 		return [
 			LoggersLoader::class,
 			NotifiersLoader::class,
-			AdminPageLoader::class
+			AdminPageLoader::class,
 		];
 	}
 

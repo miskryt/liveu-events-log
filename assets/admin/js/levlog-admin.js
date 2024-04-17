@@ -8,8 +8,9 @@ $(document).ready( function () {
 
         ajax: {
             url: '/wp-admin/admin-ajax.php',
+            dataSrc: 'data.data',
             data: function (d) {
-                d.action = 'get_data';
+                d.action = 'get_events_list';
                 d.nonce_code = myajax.nonce
             }
         },

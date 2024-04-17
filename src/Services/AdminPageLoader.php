@@ -1,20 +1,17 @@
 <?php
 
-
 namespace LiveuEventsLog\Services;
 
 
 use LiveuEventsLog\Admin\AdminPage;
+use LiveuEventsLog\Admin\View\View;
 
 class AdminPageLoader extends Service
 {
 	private $admin_page;
 
 	public function loaded (){
-		$this->admin_page = new AdminPage();
-
-		if( wp_doing_ajax() )
-			add_action('wp_ajax_get_data', [$this->admin_page, 'get_events_list_callback']);
+		$this->admin_page = new AdminPage($this->api, new View());
 
 		add_action( 'admin_menu', array( $this, 'add_admin_pages' ) );
 	}

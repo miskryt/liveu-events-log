@@ -1,43 +1,32 @@
 <?php
 namespace LiveuEventsLog;
 
-use LiveuEventsLog\Admin\AdminPage;
+use LiveuEventsLog\Admin\Api\Api;
 use LiveuEventsLog\Admin\Model\Model;
-use LiveuEventsLog\Admin\View\View;
 use LiveuEventsLog\Config\Config;
-use LiveuEventsLog\Services\AdminPageLoader;
-use function Crontrol\Schedule\add;
 
 class Plugin {
 
-	private Model $model;
+	private Api $api;
 	private Config $config;
 
-
 	public function __construct() {
-		$this->model = new Model();
-		$this->view = new View();
+		$this->api = new Api(new Model());
 		$this->config = Config::get_instance();
 
 		$this->load_services($this->get_services());
 	}
 
 	public function run() {
-
-
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts'], 10, 3);
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_styles'], 10, 3);
-
-
-
-
 		add_action( 'admin_menu', [$this, 'add_user_menu_bubble'], 10, 3 );
 	}
 
 	public function add_user_menu_bubble(){
 		global $menu;
 
-		$notification_count = $this->model->get_events_count();
+		$notification_count = $this->api->get_events_count();
 
 		if( $notification_count ){
 			foreach( $menu as $key => $value ){
@@ -48,7 +37,6 @@ class Plugin {
 			}
 		}
 	}
-
 
 	private function get_services(){
 		return $this->config->get_services();
@@ -62,13 +50,9 @@ class Plugin {
 				return;
 			}
 
-			$service = new $service_classname($this->config);
+			$service = new $service_classname($this->api, $this->config);
 			$service->loaded();
 		}
-	}
-
-	private function set_menu_notificators() {
-
 	}
 
 	public function enqueue_admin_scripts($hook) {
@@ -92,5 +76,4 @@ class Plugin {
 		wp_enqueue_style('iconoir-css', 'https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css');
 		wp_enqueue_style('plugin-css', LEVLOG_PLUGIN_URL. '/assets/admin/css/plugin.css');
 	}
-
 }

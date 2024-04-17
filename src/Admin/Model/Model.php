@@ -11,8 +11,10 @@ class Model implements IModel {
 
 		$start  = $params['start']  ?? 0;
 		$length = $params['length'] ?? 10;
+		$order_by = $params['order_by'] ?? 'id';
+		$asc_desc = $params['order_dir'] ?? 'desc';
 
-		$sql = $wpdb->prepare( "SELECT * FROM $table_name limit %d offset %d", $length, $start );
+		$sql = $wpdb->prepare( "SELECT * FROM $table_name order by $order_by $asc_desc limit %d offset %d", $length, $start );
 		return $wpdb->get_results($sql);
 	}
 
@@ -25,17 +27,9 @@ class Model implements IModel {
 		return $wpdb->get_results( $sql )[0]->total;
 	}
 
-	public function get_event_data_by_id(int $id) {
-		$event = $this->get_event_by_id($id);
-		$event_context = $this->get_event_context_by_event_id($id);
 
-		return [
 
-		];
-
-	}
-
-	private function get_event_by_id(int $id) {
+	public function get_event_by_id(int $id): array {
 		global $wpdb;
 
 		$table_name = EVENTS_DATABASE_TABLE;
@@ -44,7 +38,7 @@ class Model implements IModel {
 		return $wpdb->get_results($sql);
 	}
 
-	private function get_event_context_by_event_id(int $event_id) {
+	public function get_event_context_by_event_id(int $event_id): array {
 		global $wpdb;
 
 		$table_name = EVENTS_CONTEXT_TABLE;
