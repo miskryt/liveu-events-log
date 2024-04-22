@@ -3,6 +3,7 @@
 namespace LiveuEventsLog\Services;
 
 
+use LiveuEventsLog\Admin\AdminListTable;
 use LiveuEventsLog\Admin\AdminPage;
 use LiveuEventsLog\Admin\Api\Api;
 use LiveuEventsLog\Admin\View\View;
@@ -10,15 +11,17 @@ use LiveuEventsLog\Admin\View\View;
 class AdminPageLoader extends Service
 {
 	private $admin_page;
+	private Api $api;
 
 	public function loaded (){
-		$this->admin_page = new AdminPage(new Api($this->plugin), new View());
+		$this->api = new Api($this->plugin);
+		$this->admin_page = new AdminPage($this->api, new View());
 
 		add_action( 'admin_menu', array( $this, 'add_admin_pages' ) );
 	}
 
 	public function add_admin_pages() {
-		add_menu_page(
+		$hook = add_menu_page(
 			'Events History',
 			'Events History',
 			'manage_options',
@@ -36,5 +39,11 @@ class AdminPageLoader extends Service
 			'liveu-events-options',
 			[$this->admin_page, 'init_options_page']
 		);
+
+		add_action( "load-$hook", [$this, 'AdminListTable_load'] );
+	}
+
+	public function AdminListTable_load(){
+		$GLOBALS['AdminListTable'] = new AdminListTable($this->api);
 	}
 }

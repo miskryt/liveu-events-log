@@ -22,6 +22,39 @@ class Api
 		return $this->model->get_events_count();
 	}
 
+	public function get_events_list($return_type = OBJECT) {
+
+		$params = [
+			'search' => '',
+			'start'  => 0,
+			'length' => 10,
+		];
+
+		$events_list = $this->model->get_events_list($params, $return_type);
+
+		foreach ($events_list as $event)
+		{
+
+			$d = [
+				"id" => $event->id,
+				"user" => get_user_by('id', $event->user_id)->user_login,
+				"action" => EnumActions::get($event->action),
+				"post_url" =>
+					'<a  href="?page=liveu-events&action=show_diff&event_id=' . $event->id . '">' .
+					get_post($event->post_id)->post_title .
+					'</a>&nbsp;<a target="_blank" href="' . get_edit_post_link($event->post_id) . '"><i class="levlog-list-share-icon iconoir-open-in-window"></i></a>',
+
+				"datetime" => $event->date,
+				"post_type" => $event->post_type,
+				"new" => $event->new,
+			];
+
+			$data[] = $d;
+		}
+
+		return $data;
+	}
+
 	public function get_events_list_callback() {
 		check_ajax_referer( 'myajax-nonce', 'nonce_code' );
 

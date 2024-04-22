@@ -5,7 +5,7 @@ use LiveuEventsLog\Admin\Interfaces\IModel;
 
 class Model implements IModel {
 
-	public function get_events_list(array $params) : array {
+	public function get_events_list(array $params, $return_type = OBJECT) : array {
 		$table_name = EVENTS_DATABASE_TABLE;
 		global $wpdb;
 
@@ -15,7 +15,7 @@ class Model implements IModel {
 		$asc_desc = $params['order_dir'] ?? 'desc';
 
 		$sql = $wpdb->prepare( "SELECT * FROM $table_name order by $order_by $asc_desc limit %d offset %d", $length, $start );
-		return $wpdb->get_results($sql);
+		return $wpdb->get_results($sql, $return_type);
 	}
 
 	public function get_events_count() : int {

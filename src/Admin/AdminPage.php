@@ -27,6 +27,7 @@ class AdminPage
 		}
 		else
 		{
+			$data['table'] = $GLOBALS['AdminListTable'];
 			$this->viewer->render('templates/admin', $data);
 		}
 	}

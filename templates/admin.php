@@ -1,4 +1,8 @@
 
 <?=$data['title'] ?>
 
-<?php require_once ('table.php'); ?>
+<?php
+
+$data['table']->display();
+//require_once ('table.php');
+?>

@@ -3,7 +3,7 @@ namespace LiveuEventsLog\Loggers;
 
 use LiveuEventsLog\EnumActions;
 use LiveuEventsLog\EnumLevels;
-use Simple_History\Helpers;
+use LiveuEventsLog\Helpers\DiffParser;
 
 class PostLogger extends Logger
 {
@@ -440,14 +440,14 @@ class PostLogger extends Logger
 								$diff_table_output .= sprintf(
 									'<tr><td>%1$s</td><td>%2$s</td></tr>',
 									$label,
-									helpers::text_diff( $post_old_value, $post_new_value )
+									DiffParser::text_diff( $post_old_value, $post_new_value )
 								);
 							}
 							elseif ( 'post_content' === $key_to_diff ) {
 								$has_diff_values = true;
 								$label = 'Content';
 
-								$key_text_diff = helpers::text_diff( $post_old_value, $post_new_value );
+								$key_text_diff = DiffParser::text_diff( $post_old_value, $post_new_value );
 
 								if ( $key_text_diff ) {
 									$diff_table_output .= sprintf(
@@ -496,7 +496,7 @@ class PostLogger extends Logger
 										<td>%2$s</td>
 									</tr>',
 									$label,
-									helpers::text_diff( $post_old_value, $post_new_value )
+									DiffParser::text_diff( $post_old_value, $post_new_value )
 								);
 							}
 						}
