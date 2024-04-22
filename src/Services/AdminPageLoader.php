@@ -4,6 +4,7 @@ namespace LiveuEventsLog\Services;
 
 
 use LiveuEventsLog\Admin\AdminPage;
+use LiveuEventsLog\Admin\Api\Api;
 use LiveuEventsLog\Admin\View\View;
 
 class AdminPageLoader extends Service
@@ -11,7 +12,7 @@ class AdminPageLoader extends Service
 	private $admin_page;
 
 	public function loaded (){
-		$this->admin_page = new AdminPage($this->api, new View());
+		$this->admin_page = new AdminPage(new Api($this->plugin), new View());
 
 		add_action( 'admin_menu', array( $this, 'add_admin_pages' ) );
 	}

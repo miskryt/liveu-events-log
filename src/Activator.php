@@ -26,6 +26,7 @@ class Activator
             `post_id` int(11) unsigned NOT NULL,
             `post_type` varchar(255) NOT NULL,
             `action` int(11) NOT NULL,
+            `logger` varchar(255) NOT NULL,
             `date` datetime,
             `message` varchar(255) NULL,
             `new` boolean NOT NULL DEFAULT true,

@@ -2,22 +2,22 @@
 namespace LiveuEventsLog;
 
 use LiveuEventsLog\Admin\Api\Api;
-use LiveuEventsLog\Admin\Model\Model;
 use LiveuEventsLog\Config\Config;
 
 class Plugin {
 
-	private Api $api;
 	private Config $config;
+	private Api $api;
+	private array $instantiated_loggers = [];
 
 	public function __construct() {
-		$this->api = new Api(new Model());
 		$this->config = Config::get_instance();
-
-		$this->load_services($this->get_services());
+		$this->api = new Api($this);
 	}
 
 	public function run() {
+		$this->load_services();
+
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts'], 10, 3);
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_styles'], 10, 3);
 		add_action( 'admin_menu', [$this, 'add_user_menu_bubble'], 10, 3 );
@@ -38,11 +38,9 @@ class Plugin {
 		}
 	}
 
-	private function get_services(){
-		return $this->config->get_services();
-	}
+	private function load_services() {
+		$services = $this->config->get_services();
 
-	private function load_services($services) {
 		foreach ($services  as $service_classname )
 		{
 			if ( ! class_exists( $service_classname ) )
@@ -50,7 +48,9 @@ class Plugin {
 				return;
 			}
 
-			$service = new $service_classname($this->api, $this->config);
+			$service = new $service_classname($this);
+
+			//$this->instantiated_services[] = $service;
 			$service->loaded();
 		}
 	}
@@ -69,11 +69,20 @@ class Plugin {
 				'nonce' => wp_create_nonce('myajax-nonce')
 			)
 		);
+
 	}
 
 	public function enqueue_admin_styles() {
 		wp_enqueue_style('datatables-css', LEVLOG_PLUGIN_URL. '/assets/admin/lib/datatables/datatables.css');
 		wp_enqueue_style('iconoir-css', 'https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css');
 		wp_enqueue_style('plugin-css', LEVLOG_PLUGIN_URL. '/assets/admin/css/plugin.css');
+	}
+
+	public function get_instantiated_loggers() {
+		return $this->instantiated_loggers;
+	}
+
+	public function set_instantiated_loggers( $instantiated_loggers ) {
+		$this->instantiated_loggers = $instantiated_loggers;
 	}
 }

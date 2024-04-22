@@ -1,14 +1,18 @@
 <?php
 namespace LiveuEventsLog\Admin\Api;
 
-use LiveuEventsLog\Admin\Interfaces\IModel;
+use LiveuEventsLog\Admin\Model\Model;
 use LiveuEventsLog\EnumActions;
+use LiveuEventsLog\Plugin;
 
 
 class Api
 {
-	public function __construct(IModel $model) {
-		$this->model = $model;
+	private Plugin $plugin;
+
+	public function __construct(Plugin $plugin) {
+		$this->model = new Model();
+		$this->plugin = $plugin;
 
 		if( wp_doing_ajax() )
 			add_action('wp_ajax_get_events_list', [$this, 'get_events_list_callback']);
@@ -74,13 +78,34 @@ class Api
 		return $data;
 	}
 
-	public function get_event_data_by_id(int $id) {
-		$event = $this->model->get_event_by_id($id);
-		$event_context = $this->model->get_event_context_by_event_id($id);
 
-		return [
-			'event' => $event,
-			'context' => $event_context
-		];
+	public function get_event_data_by_id(int $id): array {
+		$event = $this->model->get_event_by_id($id)[0];
+		$instantiated_loggers = $this->plugin->get_instantiated_loggers();
+		//$logger = $event->logger;
+
+		//$logger = $this->
+
+		//$services = $this->get_services();
+
+
+		//$event_context = $this->model->get_event_context_by_event_id($id);
+
+		//return [
+		//	'event' => $event,
+		//	'context' => $event_context
+		//];
+
+		return [];
+	}
+
+	public function insert_sql($table, $data) {
+		global $wpdb;
+		return $wpdb->insert($table, $data);
+	}
+
+	public function insert_id_sql(): int {
+		global $wpdb;
+		return $wpdb->insert_id;
 	}
 }

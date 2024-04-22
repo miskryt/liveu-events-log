@@ -6,10 +6,17 @@ use LiveuEventsLog\EnumLevels;
 
 class PostLogger extends Logger
 {
+	public $slug = 'SimplePostLogger';
+
 	protected $old_post_data = array();
 
-	public function __construct() {
+	public function loaded() : void {
 		add_action( 'init', array( $this, 'add_rest_hooks' ), 10, 2 );
+	}
+
+	public function get_slug (): string
+	{
+		return $this->slug;
 	}
 
 	public function add_rest_hooks() {
@@ -157,8 +164,6 @@ class PostLogger extends Logger
 			// Now we have both old and new post data, including custom fields, in the same format
 			// So let's compare!
 			$context = $this->add_post_data_diff_to_context( $context, $old_post_data, $new_post_data );
-
-
 			$this->log( EnumLevels::INFO, EnumActions::update, 'post_updated', $context );
 		}
 	}
@@ -350,12 +355,10 @@ class PostLogger extends Logger
 		return array( $data, $context );
 	}
 
-	public function append_context( $event_id, $context ) {
+	private function append_context( $event_id, $context ) {
 		if ( empty( $event_id ) || empty( $context ) ) {
 			return false;
 		}
-
-		global $wpdb;
 
 		foreach ( $context as $key => $value ) {
 			// Everything except strings should be json_encoded, ie. arrays and objects.
@@ -369,15 +372,13 @@ class PostLogger extends Logger
 				'value' => $value,
 			);
 
-			$wpdb->insert( EVENTS_CONTEXT_TABLE, $data );
+			$this->api->insert_sql(EVENTS_CONTEXT_TABLE, $data );
 		}
 
 		return true;
 	}
 
 	private function log($level, $action, $message, $context) {
-		global $wpdb;
-
 		$localtime = current_time( 'mysql', 1 );
 
 		$data = array(
@@ -387,17 +388,18 @@ class PostLogger extends Logger
 			'post_id' => $context['post_id'],
 			'post_type' => $context['post_type'],
 			'action'  => $action,
+			'logger' => $this->slug
 		);
 
 		[$data, $context] = $this->append_date_to_context( $data, $context );
 
-		$result = $wpdb->insert( EVENTS_DATABASE_TABLE, $data );
+		$result = $this->api->insert_sql(EVENTS_DATABASE_TABLE, $data );
 
 		// Save context if able to store row.
 		if ( false === $result ) {
 			$history_inserted_id = null;
 		} else {
-			$history_inserted_id = $wpdb->insert_id;
+			$history_inserted_id = $this->api->insert_id_sql();
 
 			// Insert all context values into db.
 			$this->append_context( $history_inserted_id, $context );

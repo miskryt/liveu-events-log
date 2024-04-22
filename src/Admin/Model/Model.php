@@ -34,7 +34,6 @@ class Model implements IModel {
 
 		$table_name = EVENTS_DATABASE_TABLE;
 		$sql = sprintf("SELECT * FROM %s WHERE `id`= %d", $table_name, $id);
-
 		return $wpdb->get_results($sql);
 	}
 

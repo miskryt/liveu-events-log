@@ -1,6 +1,7 @@
 <?php
 namespace LiveuEventsLog\Config;
 
+use LiveuEventsLog\Admin\Api\Api;
 use LiveuEventsLog\Loggers\PostLogger;
 use LiveuEventsLog\Services\AdminPageLoader;
 use LiveuEventsLog\Services\LoggersLoader;
@@ -42,7 +43,7 @@ class Config
 		return [
 			LoggersLoader::class,
 			NotifiersLoader::class,
-			AdminPageLoader::class,
+			AdminPageLoader::class
 		];
 	}
 
