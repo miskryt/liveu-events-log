@@ -3,10 +3,11 @@ namespace LiveuEventsLog\Loggers;
 
 use LiveuEventsLog\EnumActions;
 use LiveuEventsLog\EnumLevels;
+use Simple_History\Helpers;
 
 class PostLogger extends Logger
 {
-	public $slug = 'SimplePostLogger';
+	public $slug = 'PostLogger';
 
 	protected $old_post_data = array();
 
@@ -356,6 +357,8 @@ class PostLogger extends Logger
 	}
 
 	private function append_context( $event_id, $context ) {
+		global $wpdb;
+
 		if ( empty( $event_id ) || empty( $context ) ) {
 			return false;
 		}
@@ -372,13 +375,14 @@ class PostLogger extends Logger
 				'value' => $value,
 			);
 
-			$this->api->insert_sql(EVENTS_CONTEXT_TABLE, $data );
+			$wpdb->insert(EVENTS_CONTEXT_TABLE, $data );
 		}
 
 		return true;
 	}
 
 	private function log($level, $action, $message, $context) {
+		global $wpdb;
 		$localtime = current_time( 'mysql', 1 );
 
 		$data = array(
@@ -393,16 +397,160 @@ class PostLogger extends Logger
 
 		[$data, $context] = $this->append_date_to_context( $data, $context );
 
-		$result = $this->api->insert_sql(EVENTS_DATABASE_TABLE, $data );
+		$result = $wpdb->insert(EVENTS_DATABASE_TABLE, $data );
 
 		// Save context if able to store row.
 		if ( false === $result ) {
 			$history_inserted_id = null;
 		} else {
-			$history_inserted_id = $this->api->insert_id_sql();
+			$history_inserted_id = $$wpdb->insert_id;
 
 			// Insert all context values into db.
 			$this->append_context( $history_inserted_id, $context );
 		} // End if().
+	}
+
+	public function get_event_details_output (array $event): string
+	{
+		$context = $event['context'];
+		$message = $event['message'];
+
+		$out = '';
+
+		if( 'post_updated' === $message ) {
+
+			$diff_table_output = '';
+			$has_diff_values = false;
+
+			foreach ( $context as $key => $val ) {
+
+				if ( strpos( $key, 'post_prev_' ) !== false ) {
+					$key_to_diff = substr( $key, strlen( 'post_prev_' ) );
+					$key_for_new_val = "post_new_{$key_to_diff}";
+
+					if ( isset( $context[ $key_for_new_val ] ) ) {
+						$post_old_value = $context[ $key ];
+						$post_new_value = $context[ $key_for_new_val ];
+
+						if ( $post_old_value !== $post_new_value ) {
+							if ( 'post_title' === $key_to_diff ) {
+								$has_diff_values = true;
+								$label = 'Title';
+
+								$diff_table_output .= sprintf(
+									'<tr><td>%1$s</td><td>%2$s</td></tr>',
+									$label,
+									helpers::text_diff( $post_old_value, $post_new_value )
+								);
+							}
+							elseif ( 'post_content' === $key_to_diff ) {
+								$has_diff_values = true;
+								$label = 'Content';
+
+								$key_text_diff = helpers::text_diff( $post_old_value, $post_new_value );
+
+								if ( $key_text_diff ) {
+									$diff_table_output .= sprintf(
+										'<tr><td>%1$s</td><td>%2$s</td></tr>',
+										$label,
+										$key_text_diff
+									);
+								}
+							}
+							elseif ( 'post_status' === $key_to_diff ) {
+								$has_diff_values = true;
+								$label = 'Status';
+
+								$diff_table_output .= sprintf(
+									'<tr>
+										<td>%1$s</td>
+										<td>Changed from %2$s to %3$s</td>
+									</tr>',
+									$label,
+									esc_html( $post_old_value ),
+									esc_html( $post_new_value )
+								);
+							}
+							elseif ( 'post_date' === $key_to_diff ) {
+								$has_diff_values = true;
+								$label = 'Publish date';
+
+								$diff_table_output .= sprintf(
+									'<tr>
+										<td>%1$s</td>
+										<td>Changed from %2$s to %3$s</td>
+									</tr>',
+									$label,
+									esc_html( $post_old_value ),
+									esc_html( $post_new_value )
+								);
+							}
+							elseif ( 'post_name' === $key_to_diff ) {
+								$has_diff_values = true;
+								$label = 'Permalink';
+
+								// $diff = new FineDiff($post_old_value, $post_new_value, FineDiff::$wordGranularity);
+								$diff_table_output .= sprintf(
+									'<tr>
+										<td>%1$s</td>
+										<td>%2$s</td>
+									</tr>',
+									$label,
+									helpers::text_diff( $post_old_value, $post_new_value )
+								);
+							}
+						}
+					}
+				}
+			}
+
+			if (
+				isset( $context['post_meta_added'] ) ||
+				isset( $context['post_meta_removed'] ) ||
+				isset( $context['post_meta_changed'] )
+			) {
+				$meta_changed_out = '';
+				$has_diff_values = true;
+
+				if ( isset( $context['post_meta_added'] ) ) {
+					$meta_changed_out .=
+						"<span class=''>" .
+						(int) $context['post_meta_added'] .
+						' added</span> ';
+				}
+
+				if ( isset( $context['post_meta_removed'] ) ) {
+					$meta_changed_out .=
+						"<span class=''>" .
+						(int) $context['post_meta_removed'] .
+						' removed</span> ';
+				}
+
+				if ( isset( $context['post_meta_changed'] ) ) {
+					$meta_changed_out .=
+						"<span class=''>" .
+						(int) $context['post_meta_changed'] .
+						' changed</span> ';
+				}
+
+				$diff_table_output .= sprintf(
+					'<tr>
+						<td>%1$s</td>
+						<td>%2$s</td>
+					</tr>',
+					'Custom fields',
+					$meta_changed_out
+				);
+			}
+
+			if ( $has_diff_values || $diff_table_output ) {
+				$diff_table_output =
+					'<table class="SimpleHistoryLogitem__keyValueTable">' . $diff_table_output . '</table>';
+			}
+
+			$out .= $diff_table_output;
+		}
+
+		return $out;
 	}
 }

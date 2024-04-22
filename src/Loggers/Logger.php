@@ -4,16 +4,14 @@
 namespace LiveuEventsLog\Loggers;
 
 
-use LiveuEventsLog\Admin\Api\Api;
-
 abstract class Logger
 {
-	protected Api $api;
 
-	public function __construct(Api $api) {
-		$this->api = $api;
+	public function __construct() {
+
 	}
 
 	abstract public function loaded() : void;
 	abstract public function get_slug() : string;
+	abstract public function get_event_details_output(array $event) : string;
 }

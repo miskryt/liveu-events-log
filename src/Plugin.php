@@ -85,4 +85,18 @@ class Plugin {
 	public function set_instantiated_loggers( $instantiated_loggers ) {
 		$this->instantiated_loggers = $instantiated_loggers;
 	}
+
+	public function get_instantiated_logger_by_slug( $slug = '' ) {
+		if ( empty( $slug ) ) {
+			return false;
+		}
+
+		foreach ( $this->get_instantiated_loggers() as $one_logger ) {
+			if ( $slug === $one_logger['instance']->get_slug() ) {
+				return $one_logger['instance'];
+			}
+		}
+
+		return false;
+	}
 }

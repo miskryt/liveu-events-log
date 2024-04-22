@@ -32,17 +32,27 @@ class Model implements IModel {
 	public function get_event_by_id(int $id): array {
 		global $wpdb;
 
-		$table_name = EVENTS_DATABASE_TABLE;
-		$sql = sprintf("SELECT * FROM %s WHERE `id`= %d", $table_name, $id);
-		return $wpdb->get_results($sql);
+		$sql = sprintf("SELECT * FROM %s WHERE `id`= %d", EVENTS_DATABASE_TABLE, $id);
+
+		$event = $wpdb->get_results($sql, ARRAY_A)[0];
+		$contexts = $this->get_event_context_by_event_id($id);
+
+		$r = [];
+		foreach ($contexts as $context_item)
+		{
+			$r[$context_item['key']] = $context_item['value'];
+		}
+
+		$event['context'] = $r;
+
+		return $event;
 	}
 
-	public function get_event_context_by_event_id(int $event_id): array {
+	private function get_event_context_by_event_id(int $event_id): array {
 		global $wpdb;
 
-		$table_name = EVENTS_CONTEXT_TABLE;
-		$sql = sprintf("SELECT * FROM %s WHERE `event_id`= %d", $table_name, $event_id);
+		$sql = sprintf("SELECT * FROM %s WHERE `event_id`= %d", EVENTS_CONTEXT_TABLE, $event_id);
 
-		return $wpdb->get_results($sql);
+		return $wpdb->get_results($sql, ARRAY_A);
 	}
 }

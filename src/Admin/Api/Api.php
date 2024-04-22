@@ -79,33 +79,13 @@ class Api
 	}
 
 
-	public function get_event_data_by_id(int $id): array {
-		$event = $this->model->get_event_by_id($id)[0];
-		$instantiated_loggers = $this->plugin->get_instantiated_loggers();
-		//$logger = $event->logger;
+	public function get_event_data_by_id(int $id): string {
+		$event = $this->model->get_event_by_id($id);
 
-		//$logger = $this->
+		$logger = $this->plugin->get_instantiated_logger_by_slug( $event['logger'] );
+		$logger_details_output = $logger->get_event_details_output( $event );
 
-		//$services = $this->get_services();
-
-
-		//$event_context = $this->model->get_event_context_by_event_id($id);
-
-		//return [
-		//	'event' => $event,
-		//	'context' => $event_context
-		//];
-
-		return [];
+		return $logger_details_output;
 	}
 
-	public function insert_sql($table, $data) {
-		global $wpdb;
-		return $wpdb->insert($table, $data);
-	}
-
-	public function insert_id_sql(): int {
-		global $wpdb;
-		return $wpdb->insert_id;
-	}
 }
