@@ -1,7 +1,6 @@
 <?php
 //echo $data['title'] ?? '';
 ?>
-
 <table id="liveu_events_table" class="display nowrap table table-striped" >
 	<thead>
 	<tr>

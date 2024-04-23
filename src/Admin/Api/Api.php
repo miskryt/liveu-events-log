@@ -22,15 +22,14 @@ class Api
 		return $this->model->get_events_count();
 	}
 
-	public function get_events_list($return_type = OBJECT) {
+	public function get_new_events_count() {
+		return $this->model->get_new_events_count();
+	}
 
-		$params = [
-			'search' => '',
-			'start'  => 0,
-			'length' => 10,
-		];
+	public function get_events_list($params, $return_type = OBJECT) {
 
 		$events_list = $this->model->get_events_list($params, $return_type);
+		$data = [];
 
 		foreach ($events_list as $event)
 		{
@@ -44,7 +43,7 @@ class Api
 					get_post($event->post_id)->post_title .
 					'</a>&nbsp;<a target="_blank" href="' . get_edit_post_link($event->post_id) . '"><i class="levlog-list-share-icon iconoir-open-in-window"></i></a>',
 
-				"datetime" => $event->date,
+				"date" => $event->date,
 				"post_type" => $event->post_type,
 				"new" => $event->new,
 			];
@@ -58,13 +57,11 @@ class Api
 	public function get_events_list_callback() {
 		check_ajax_referer( 'myajax-nonce', 'nonce_code' );
 
-		$search = $_REQUEST['search'] ?? '';
 		$start  = $_REQUEST['start']  ?? 0;
 		$length = $_REQUEST['length'] ?? 10;
 		$draw   = $_REQUEST['draw']   ?? 1;
 
 		$params = [
-			'search' => $search,
 			'start'  => $start,
 			'length' => $length,
 			'draw'   => $draw
@@ -119,6 +116,13 @@ class Api
 		$logger_details_output = $logger->get_event_details_output( $event );
 
 		return $logger_details_output;
+	}
+
+	public function set_event_viewed(int $id) {
+		global $wpdb;
+		$table = EVENTS_DATABASE_TABLE;
+
+		$wpdb->update($table, [ 'new' => 0 ], ["id" => $id]);
 	}
 
 }

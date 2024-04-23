@@ -12,6 +12,8 @@ class PostLogger extends Logger
 	protected $old_post_data = array();
 
 	public function loaded() : void {
+		add_action( 'admin_action_editpost', array( $this, 'on_admin_action_editpost' ) );
+		add_action( 'transition_post_status', array( $this, 'on_transition_post_status' ), 10, 3 );
 		add_action( 'init', array( $this, 'add_rest_hooks' ), 10, 2 );
 	}
 
@@ -25,13 +27,62 @@ class PostLogger extends Logger
 		$post_types = get_post_types( array(), 'object' );
 
 		foreach ( $post_types as $post_type ) {
-
 			add_filter( "rest_pre_insert_{$post_type->name}", array( $this, 'on_rest_pre_insert' ), 10, 2 );
 			add_filter( "rest_after_insert_{$post_type->name}", array( $this, 'on_rest_after_insert' ), 10, 3 );
 		}
-		add_filter( "rest_pre_insert_case-study", array( $this, 'on_rest_pre_insert' ), 10, 2 );
 	}
 
+	public function on_admin_action_editpost() {
+
+		$post_ID = isset( $_POST['post_ID'] ) ? (int) $_POST['post_ID'] : 0;
+
+		if ( $post_ID === 0 ) {
+			return;
+		}
+
+		$prev_post_data = get_post( $post_ID );
+
+		if ( ! $prev_post_data instanceof \WP_Post ) {
+			return;
+		}
+
+		$this->old_post_data[ $post_ID ] = array(
+			'post_data' => $prev_post_data,
+			'post_meta' => get_post_custom( $post_ID ),
+			'post_terms' => wp_get_object_terms( $post_ID, get_object_taxonomies( $prev_post_data->post_type ) ),
+		);
+	}
+
+	public function on_transition_post_status( $new_status, $old_status, $post ): void
+	{
+		$isRestApiRequest = defined( 'REST_REQUEST' ) && REST_REQUEST;
+
+		if ( $isRestApiRequest ) {
+			return;
+		}
+
+		if ( ! is_a( $post, 'WP_Post' ) ) {
+			return;
+		}
+
+		$old_post = $this->old_post_data[ $post->ID ]['post_data'] ?? null;
+		$old_post_meta = $this->old_post_data[ $post->ID ]['post_meta'] ?? null;
+		$old_post_terms = $this->old_post_data[ $post->ID ]['post_terms'] ?? null;
+
+		$args = array(
+			'new_post' => $post,
+			'new_post_meta' => get_post_custom( $post->ID ),
+			'new_post_terms' => wp_get_object_terms( $post->ID, get_object_taxonomies( $post->post_type ) ),
+			'old_post' => $old_post,
+			'old_post_meta' => $old_post_meta,
+			'old_post_terms' => $old_post_terms,
+			'old_status' => $old_status
+		);
+
+
+
+		$this->maybe_log_post_change( $args );
+	}
 
 	public function on_rest_pre_insert( $prepared_post, $request ) {
 
@@ -78,20 +129,18 @@ class PostLogger extends Logger
 			'new_post_meta',
 			'old_post',
 			'old_post_meta',
-			// Old status is included because that's the value we get in filter
-			// "transition_post_status", when a previous post may not exist.
 			'old_status',
 		);
 
 		$args = wp_parse_args( $args, $default_args );
 
-		// Bail if needed args not set.
 		if ( ! isset( $args['new_post'] ) || ! isset( $args['new_post_meta'] ) ) {
 			return;
 		}
 
 
 		$new_status = $args['new_post']->post_status ?? null;
+
 		$post = $args['new_post'];
 		$new_post_data = array(
 			'post_data' => $post,
@@ -100,7 +149,7 @@ class PostLogger extends Logger
 		);
 
 
-		// Set old status to status from old post with fallback to old_status variable.
+
 		$old_status = $args['old_post']->post_status ?? null;
 		$old_status = ! isset( $old_status ) && isset( $args['old_status'] ) ? $args['old_status'] : $old_status;
 
@@ -112,19 +161,15 @@ class PostLogger extends Logger
 			'post_terms' => $args['old_post_terms'] ?? null,
 		);
 
-		// Default to log.
 		$ok_to_log = true;
 
-		// Don't log revisions.
 		if ( wp_is_post_revision( $post ) ) {
 			$ok_to_log = false;
 		}
 
-		// Don't log Gutenberg saving meta boxes.
 		if ( isset( $_GET['meta-box-loader'] ) && sanitize_text_field( wp_unslash( $_GET['meta-box-loader'] ) ) ) {
 			$ok_to_log = false;
 		}
-
 
 		if ( ! $ok_to_log ) {
 			return;
@@ -148,7 +193,6 @@ class PostLogger extends Logger
 			'post_title' => get_the_title( $post ),
 		);
 
-
 		if ( 'auto-draft' === $old_status && ( 'auto-draft' !== $new_status && 'inherit' !== $new_status ) ) {
 			// Post created.
 			$this->log( EnumLevels::INFO,EnumActions::create, 'post_created', $context );
@@ -158,13 +202,10 @@ class PostLogger extends Logger
 		} elseif ( 'trash' === $new_status ) {
 			// Post trashed.
 			$this->log( EnumLevels::INFO,EnumActions::trash,'post_trashed', $context );
-		} else {
-			// Existing post was updated.
-
-			// Also add diff between previous saved data and new data.
-			// Now we have both old and new post data, including custom fields, in the same format
-			// So let's compare!
+		} else
+		{
 			$context = $this->add_post_data_diff_to_context( $context, $old_post_data, $new_post_data );
+
 			$this->log( EnumLevels::INFO, EnumActions::update, 'post_updated', $context );
 		}
 	}
@@ -178,9 +219,20 @@ class PostLogger extends Logger
 
 		$arr_keys_to_diff = array(
 			'post_title',
+			'post_name',
 			'post_content',
-			'post_status'
+			'post_status',
+			'menu_order',
+			'post_date',
+			'post_date_gmt',
+			'post_excerpt',
+			'comment_status',
+			'ping_status',
+			'post_parent', // only id, need to get context for that, like name of parent at least?
+			'post_author', // only id, need to get more info for user.
 		);
+
+		//$arr_keys_to_diff = $this->add_keys_to_diff( $arr_keys_to_diff );
 
 		foreach ( $arr_keys_to_diff as $key ) {
 			if ( isset( $old_data->$key ) && isset( $new_data->$key ) ) {
@@ -193,19 +245,31 @@ class PostLogger extends Logger
 		foreach ( $post_data_diff as $diff_key => $diff_values ) {
 			$context[ "post_prev_{$diff_key}" ] = $diff_values['old'];
 			$context[ "post_new_{$diff_key}" ] = $diff_values['new'];
+
+			// If post_author then get more author info,
+			// because just a user ID does not get us far.
+			if ( 'post_author' === $diff_key ) {
+				$old_author_user = get_userdata( (int) $diff_values['old'] );
+				$new_author_user = get_userdata( (int) $diff_values['new'] );
+
+				if ( is_a( $old_author_user, 'WP_User' ) && is_a( $new_author_user, 'WP_User' ) ) {
+					$context[ "post_prev_{$diff_key}/user_login" ] = $old_author_user->user_login;
+					$context[ "post_prev_{$diff_key}/user_email" ] = $old_author_user->user_email;
+					$context[ "post_prev_{$diff_key}/display_name" ] = $old_author_user->display_name;
+
+					$context[ "post_new_{$diff_key}/user_login" ] = $new_author_user->user_login;
+					$context[ "post_new_{$diff_key}/user_email" ] = $new_author_user->user_email;
+					$context[ "post_new_{$diff_key}/display_name" ] = $new_author_user->display_name;
+				}
+			}
 		}
 
-		// Compare custom fields.
-		// Array with custom field keys to ignore because changed every time or very internal.
 		$arr_meta_keys_to_ignore = array(
 			'_edit_lock',
 			'_edit_last',
 			'_post_restored_from',
 			'_wp_page_template',
 			'_thumbnail_id',
-
-			// _encloseme is added to a post when it's published. The wp-cron process should get scheduled shortly thereafter to process the post to look for enclosures.
-			// https://wordpress.stackexchange.com/questions/20904/the-encloseme-meta-key-conundrum
 			'_encloseme',
 		);
 
@@ -218,7 +282,6 @@ class PostLogger extends Logger
 		$old_meta = isset( $old_post_data['post_meta'] ) ? (array) $old_post_data['post_meta'] : array();
 		$new_meta = isset( $new_post_data['post_meta'] ) ? (array) $new_post_data['post_meta'] : array();
 
-		// Add post featured thumb data.
 		$context = $this->add_post_thumb_diff( $context, $old_meta, $new_meta );
 
 		// Remove fields that we have checked already and other that should be ignored.
@@ -253,7 +316,32 @@ class PostLogger extends Logger
 			$context['post_meta_changed'] = count( $meta_changes['changed'] );
 		}
 
+		$old_post_has_password = ! empty( $old_data->post_password );
+		$old_post_password = $old_post_has_password ? $old_data->post_password : null;
+		$old_post_status = $old_data->post_status ?? null;
 
+		$new_post_has_password = ! empty( $new_data->post_password );
+		$new_post_password = $new_post_has_password ? $new_data->post_password : null;
+		$new_post_status = $new_data->post_status ?? null;
+
+		if ( false === $old_post_has_password && 'publish' === $new_post_status && $new_post_has_password ) {
+			$context['post_password_protected'] = true;
+		} elseif (
+			$old_post_has_password &&
+			'publish' === $old_post_status &&
+			false === $new_post_has_password &&
+			'publish' === $new_post_status
+		) {
+			$context['post_password_unprotected'] = true;
+		} elseif ( $old_post_has_password && $new_post_has_password && $old_post_password !== $new_post_password ) {
+			$context['post_password_changed'] = true;
+		} elseif ( 'private' === $new_post_status && 'private' !== $old_post_status ) {
+			$context['post_private'] = true;
+
+			if ( $old_post_has_password ) {
+				$context['post_password_unprotected'] = true;
+			}
+		}
 
 		// Todo: detect sticky.
 		// Sticky is stored in option:
@@ -286,20 +374,20 @@ class PostLogger extends Logger
 			$new_post_terms
 		);
 
-		// Detect added and removed terms.
 		$term_changes = [
-			// Added = exists in new but not in old.
 			'added' => [],
-			// Removed = exists in old but not in new.
 			'removed' => [],
 		];
 
 		$term_changes['added'] = array_values( array_udiff( $new_post_terms, $old_post_terms, [ $this, 'compare_terms' ] ) );
 		$term_changes['removed'] = array_values( array_udiff( $old_post_terms, $new_post_terms, [ $this, 'compare_terms' ] ) );
 
-		// Add old and new terms to context.
+
 		$context['post_terms_added'] = $term_changes['added'];
 		$context['post_terms_removed'] = $term_changes['removed'];
+
+
+		//return apply_filters( 'simple_history/post_logger/context', $context, $old_data, $new_data, $old_meta, $new_meta );
 
 		return $context;
 	}
@@ -345,17 +433,6 @@ class PostLogger extends Logger
 		return $context;
 	}
 
-	private function append_date_to_context( $data, $context ) {
-		// Allow date to be overridden from context.
-		// Date must be in format 'Y-m-d H:i:s'.
-		if ( isset( $context['_date'] ) ) {
-			$data['date'] = $context['_date'];
-			unset( $context['_date'] );
-		}
-
-		return array( $data, $context );
-	}
-
 	private function append_context( $event_id, $context ) {
 		global $wpdb;
 
@@ -364,7 +441,7 @@ class PostLogger extends Logger
 		}
 
 		foreach ( $context as $key => $value ) {
-			// Everything except strings should be json_encoded, ie. arrays and objects.
+
 			if ( ! is_string( $value ) ) {
 				$value = json_encode( $value );
 			}
@@ -395,19 +472,12 @@ class PostLogger extends Logger
 			'logger' => $this->slug
 		);
 
-		[$data, $context] = $this->append_date_to_context( $data, $context );
-
 		$result = $wpdb->insert(EVENTS_DATABASE_TABLE, $data );
 
-		// Save context if able to store row.
-		if ( false === $result ) {
-			$history_inserted_id = null;
-		} else {
-			$history_inserted_id = $$wpdb->insert_id;
-
-			// Insert all context values into db.
+		if ( false !== $result ) {
+			$history_inserted_id = $wpdb->insert_id;
 			$this->append_context( $history_inserted_id, $context );
-		} // End if().
+		}
 	}
 
 	public function get_event_details_output (array $event): string
@@ -552,5 +622,9 @@ class PostLogger extends Logger
 		}
 
 		return $out;
+	}
+
+	public function compare_terms( $a, $b ) {
+		return $a['term_id'] <=> $b['term_id'];
 	}
 }

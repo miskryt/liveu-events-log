@@ -10,18 +10,22 @@ use LiveuEventsLog\Admin\View\View;
 
 class AdminPageLoader extends Service
 {
-	private $admin_page;
+	private AdminPage $admin_page;
 	private Api $api;
 
 	public function loaded (){
 		$this->api = new Api($this->plugin);
 		$this->admin_page = new AdminPage($this->api, new View());
 
+		add_filter( 'set_screen_option_'.'logs_per_page', function( $status, $option, $value ){
+			return (int) $value;
+		}, 10, 3 );
+
 		add_action( 'admin_menu', array( $this, 'add_admin_pages' ) );
 	}
 
 	public function add_admin_pages() {
-		$hook = add_menu_page(
+		$menu_page = add_menu_page(
 			'Events History',
 			'Events History',
 			'manage_options',
@@ -40,10 +44,13 @@ class AdminPageLoader extends Service
 			[$this->admin_page, 'init_options_page']
 		);
 
-		add_action( "load-$hook", [$this, 'AdminListTable_load'] );
+		add_action( "load-$menu_page", [$this, 'AdminListTable_load'] );
 	}
 
 	public function AdminListTable_load(){
-		$GLOBALS['AdminListTable'] = new AdminListTable($this->api);
+
+		$table = new AdminListTable($this->api);
+
+		$this->admin_page->set_table($table);
 	}
 }

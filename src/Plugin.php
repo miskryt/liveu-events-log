@@ -26,7 +26,7 @@ class Plugin {
 	public function add_user_menu_bubble(){
 		global $menu;
 
-		$notification_count = $this->api->get_events_count();
+		$notification_count = $this->api->get_new_events_count();
 
 		if( $notification_count ){
 			foreach( $menu as $key => $value ){

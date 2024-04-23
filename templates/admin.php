@@ -1,8 +1,11 @@
 
-<?=$data['title'] ?>
+
+<form method="post" action="<?= $_SERVER['PHP_SELF'] ?>?page=liveu-events">
+	<?php $data['table']->display() ?>
+</form>
 
 <?php
 
-$data['table']->display();
+
 //require_once ('table.php');
 ?>

@@ -20,7 +20,22 @@ class AdminListTable extends WP_List_Table
 		$this->prepare_items();
 	}
 
+	function get_sortable_columns ()
+	{
+		return [
+			'user' => ['user_id', true],
+			'date' => ['date', true],
+			'action' => ['action', true],
+			'post_url' => ['post_id', true],
+			'post_type' => ['post_type', true]
+		];
+	}
 
+	function get_hidden_columns() {
+		return [
+			//'new'
+		];
+	}
 
 	function get_columns() {
 		$columns = array(
@@ -28,25 +43,32 @@ class AdminListTable extends WP_List_Table
 			'user' => 'User',
 			'action' => 'Action',
 			'post_url' => 'Post url',
-			'datetime' => 'Date & Time',
-			'post_type' => 'Post Type'
+			'date' => 'Date & Time',
+			'post_type' => 'Post Type',
+			'new' => 'New'
 		);
 
 		return $columns;
 	}
 
+	function column_cb ($item)
+	{
+		return sprintf('<input type="checkbox" name="event" value="%s" />', $item['id']);
+	}
+
 	function column_default( $item, $column_name ) {
 
+		$cssClass = ($item['new'] === '1') ? 'event-unread' : '';
 
 		switch ( $column_name ) {
 			case 'id':
-			case 'user':
+			case 'user_id':
 			case 'action':
 			case 'post_url':
-			case 'datetime':
+			case 'date':
 			case 'post_type':
 			default:
-				return $item[ $column_name ];
+				return '<span class="'.$cssClass.'">'.$item[$column_name].'</span>';
 		}
 	}
 
@@ -55,8 +77,8 @@ class AdminListTable extends WP_List_Table
 		$this->table_data = $this->get_table_data();
 
 		$columns = $this->get_columns();
-		$hidden = array();
-		$sortable = array();
+		$hidden = $this->get_hidden_columns();
+		$sortable = $this->get_sortable_columns();
 		$primary = 'name';
 		$this->_column_headers = array($columns, $hidden, $sortable, $primary);
 
@@ -66,7 +88,51 @@ class AdminListTable extends WP_List_Table
 	private function get_table_data() {
 		global $wpdb;
 
-		return $this->api->get_events_list();
+		$order_by = sanitize_sql_orderby(isset($_REQUEST['orderby']) ? trim($_REQUEST['orderby']) : null);
+		$order = sanitize_sql_orderby(isset($_REQUEST['order']) ?  trim($_REQUEST['order']) : 'desc');
+
+		$start = 0;
+		$length = 10;
+		$paged = 1;
+
+		if(isset($_REQUEST['start']))
+			$start = (int)$_REQUEST['start'];
+
+		if(isset($_REQUEST['length']))
+			$length = (int)$_REQUEST['length'];
+
+		if(isset($_REQUEST['paged']))
+			$paged = (int)$_REQUEST['paged'];
+
+		if(empty($order_by))
+			$order_by = 'id';
+
+		if(empty($order))
+			$order = 'desc';
+
+		$per_page = 10;
+
+
+		$params = [
+			'order_by' => $order_by,
+			'order_dir' => $order,
+			'offset' => ($paged - 1) * $per_page,
+			'length' => $per_page,
+		];
+
+		$this->set_pagination_args([
+			"total_items" => $this->api->get_events_count(),
+			"per_page" => $per_page
+								   ]);
+
+		return $this->api->get_events_list($params);
+	}
+
+	public function get_bulk_actions ()
+	{
+		return [
+			'set_read' => "Mark as read"
+		];
 	}
 
 }
