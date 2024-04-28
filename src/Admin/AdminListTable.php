@@ -33,7 +33,7 @@ class AdminListTable extends WP_List_Table
 
 	function get_hidden_columns() {
 		return [
-			//'new'
+			'new'
 		];
 	}
 

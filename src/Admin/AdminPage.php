@@ -19,7 +19,7 @@ class AdminPage
 		$this->admin_table = $table;
 	}
 
-	public function show(): void {
+	public function show_admin_page(): void {
 		$data = [
 			'title' => 'Admin Page'
 		];
@@ -37,5 +37,9 @@ class AdminPage
 			$data['table'] = $this->admin_table;
 			$this->viewer->render('templates/admin', $data);
 		}
+	}
+
+	public function show_options_page():void {
+
 	}
 }

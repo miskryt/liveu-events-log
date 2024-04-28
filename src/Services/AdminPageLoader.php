@@ -30,7 +30,7 @@ class AdminPageLoader extends Service
 			'Events History',
 			'manage_options',
 			'liveu-events',
-			[$this->admin_page, 'show'],
+			[$this->admin_page, 'show_admin_page'],
 			'dashicons-editor-ul',
 			2
 		);
@@ -41,11 +41,13 @@ class AdminPageLoader extends Service
 			'Settings',
 			'manage_options',
 			'liveu-events-options',
-			[$this->admin_page, 'init_options_page']
+			[$this->admin_page, 'show_options_page']
 		);
 
 		add_action( "load-$menu_page", [$this, 'AdminListTable_load'] );
 	}
+
+
 
 	public function AdminListTable_load(){
 
