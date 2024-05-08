@@ -61,7 +61,13 @@ class PostLogger extends Logger
 			return;
 		}
 
+
 		if ( ! is_a( $post, 'WP_Post' ) ) {
+			return;
+		}
+
+		if($post->post_type === 'acf-field' || $post->post_type === 'acf-field-group')
+		{
 			return;
 		}
 
