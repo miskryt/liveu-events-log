@@ -31,22 +31,41 @@ class Api
 		$events_list = $this->model->get_events_list($params, $return_type);
 		$data = [];
 
+
 		foreach ($events_list as $event)
 		{
+			if( $post = get_post($event->post_id) )
+			{
+				$d = [
+					"id" => $event->id,
+					"user" => get_user_by('id', $event->user_id)->user_login,
+					"action" => EnumActions::get($event->action),
+					"post_url" =>
+						'<a  href="?page=liveu-events&action=show_diff&event_id=' . $event->id . '">' .
+						get_post($event->post_id)->post_title .
+						'</a>&nbsp;<a target="_blank" href="' . get_edit_post_link($event->post_id) . '"><i class="levlog-list-share-icon iconoir-open-in-window"></i></a>',
 
-			$d = [
-				"id" => $event->id,
-				"user" => get_user_by('id', $event->user_id)->user_login,
-				"action" => EnumActions::get($event->action),
-				"post_url" =>
-					'<a  href="?page=liveu-events&action=show_diff&event_id=' . $event->id . '">' .
-					get_post($event->post_id)->post_title .
-					'</a>&nbsp;<a target="_blank" href="' . get_edit_post_link($event->post_id) . '"><i class="levlog-list-share-icon iconoir-open-in-window"></i></a>',
+					"date" => $event->date,
+					"post_type" => $event->post_type,
+					"new" => $event->new,
+				];
+			}
+			else
+			{
+				$post_data = $this->model->get_event_context($event->id);
+				var_dump($post_data[0]['value']);
+				$d = [
+					"id" => $event->id,
+					"user" => get_user_by('id', $event->user_id)->user_login,
+					"action" => EnumActions::get($event->action),
+					"post_url" =>
+						$post_data[2]['value'] . "(ID {$post_data[0]['value']} completely deleted)",
 
-				"date" => $event->date,
-				"post_type" => $event->post_type,
-				"new" => $event->new,
-			];
+					"date" => $event->date,
+					"post_type" => $event->post_type,
+					"new" => $event->new,
+				];
+			}
 
 			$data[] = $d;
 		}
@@ -79,7 +98,6 @@ class Api
 
 		echo wp_send_json_success($result);
 		wp_die();
-
 	}
 
 	private function prepare_get_events_list_response (array $events_list): array
@@ -108,14 +126,10 @@ class Api
 		return $data;
 	}
 
+	public function get_diff_table_by_id(int $id): string {
+		$event = $this->model->get_event($id);
 
-	public function get_event_data_by_id(int $id): string {
-		$event = $this->model->get_event_by_id($id);
-
-		$logger = $this->plugin->get_instantiated_logger_by_slug( $event['logger'] );
-		$logger_details_output = $logger->get_event_details_output( $event );
-
-		return $logger_details_output;
+		return $this->plugin->get_instantiated_logger_by_slug( $event['logger'] )->get_event_details_output($event );
 	}
 
 	public function set_event_viewed(int $id) {

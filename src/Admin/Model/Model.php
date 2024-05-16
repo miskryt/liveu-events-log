@@ -39,14 +39,13 @@ class Model implements IModel {
 		return $wpdb->get_results( $sql )[0]->total;
 	}
 
-
-	public function get_event_by_id(int $id): array {
+	public function get_event(int $id): array {
 		global $wpdb;
 
 		$sql = sprintf("SELECT * FROM %s WHERE `id`= %d", EVENTS_DATABASE_TABLE, $id);
 
 		$event = $wpdb->get_results($sql, ARRAY_A)[0];
-		$contexts = $this->get_event_context_by_event_id($id);
+		$contexts = $this->get_event_context($id);
 
 		$r = [];
 		foreach ($contexts as $context_item)
@@ -59,11 +58,11 @@ class Model implements IModel {
 		return $event;
 	}
 
-	private function get_event_context_by_event_id(int $event_id): array {
+	public function get_event_context(int $event_id): array {
 		global $wpdb;
 
 		$sql = sprintf("SELECT * FROM %s WHERE `event_id`= %d", EVENTS_CONTEXT_TABLE, $event_id);
-
+//var_dump($sql);
 		return $wpdb->get_results($sql, ARRAY_A);
 	}
 }
