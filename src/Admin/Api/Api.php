@@ -53,13 +53,15 @@ class Api
 			else
 			{
 				$post_data = $this->model->get_event_context($event->id);
-				var_dump($post_data[0]['value']);
+				//var_dump($post_data[0]['value']);
 				$d = [
 					"id" => $event->id,
 					"user" => get_user_by('id', $event->user_id)->user_login,
 					"action" => EnumActions::get($event->action),
 					"post_url" =>
-						$post_data[2]['value'] . "(ID {$post_data[0]['value']} completely deleted)",
+						'<a  href="?page=liveu-events&action=show_diff&event_id=' . $event->id . '">' .
+						$post_data[2]['value'] . "(ID {$post_data[0]['value']} completely deleted)" .
+						'</a>',
 
 					"date" => $event->date,
 					"post_type" => $event->post_type,

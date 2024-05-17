@@ -1,6 +1,7 @@
 <?php
 namespace LiveuEventsLog\Loggers;
 
+use App\Submissions\Helpers;
 use LiveuEventsLog\EnumActions;
 use LiveuEventsLog\EnumLevels;
 use LiveuEventsLog\Helpers\DiffParser;
@@ -12,7 +13,7 @@ class PostLogger extends Logger
 	protected $old_post_data = array();
 
 	public function loaded() : void {
-		add_action( 'admin_action_editpost', array( $this, 'on_admin_action_editpost' ) );
+		add_action( 'admin_action_editpost', array( $this, 'on_admin_action_editpost' ) , 10, 3 );
 		add_action( 'transition_post_status', array( $this, 'on_transition_post_status' ), 10, 3 );
 		add_action( 'init', array( $this, 'add_rest_hooks' ), 10, 2 );
 	}
@@ -40,6 +41,7 @@ class PostLogger extends Logger
 			return;
 		}
 
+		// Get original post from DB BEFORE it is saved now (how it was BEFORE changes written).
 		$prev_post_data = get_post( $post_ID );
 
 		if ( ! $prev_post_data instanceof \WP_Post ) {
@@ -75,6 +77,10 @@ class PostLogger extends Logger
 		$old_post_meta = $this->old_post_data[ $post->ID ]['post_meta'] ?? null;
 		$old_post_terms = $this->old_post_data[ $post->ID ]['post_terms'] ?? null;
 
+		remove_action( 'transition_post_status', array( $this, 'on_transition_post_status' ), 10, 3 );
+		wp_update_post( array( 'ID' => $post->ID, 'post_status' => $new_status ) );
+		//add_action( 'transition_post_status', array( $this, 'on_transition_post_status' ), 10, 3 );
+
 		$args = array(
 			'new_post' => $post,
 			'new_post_meta' => get_post_custom( $post->ID ),
@@ -85,7 +91,10 @@ class PostLogger extends Logger
 			'old_status' => $old_status
 		);
 
-
+		//var_dump($args['new_post_meta']);
+		//var_dump(' <br/> ##########################################  <br/> ');
+		//var_dump($args['old_post_meta']);
+		//die();
 
 		$this->maybe_log_post_change( $args );
 	}
@@ -216,9 +225,32 @@ class PostLogger extends Logger
 		}
 	}
 
+	private function check_diff_multi($array1, $array2){
+		$result = array();
+
+		foreach($array1 as $key => $val)
+		{
+			if(isset($array2[$key]))
+			{
+				if(is_array($val)  && is_array($array2[$key]))
+				{
+					$result[$key] = $this->check_diff_multi($val, $array2[$key]);
+				}
+			}
+			else
+			{
+				$result[$key] = $val;
+			}
+		}
+
+		return $result;
+	}
+
+
 	public function add_post_data_diff_to_context( $context, $old_post_data, $new_post_data ) {
 		$old_data = $old_post_data['post_data'];
 		$new_data = $new_post_data['post_data'];
+
 
 		// Will contain the differences.
 		$post_data_diff = array();
@@ -251,23 +283,6 @@ class PostLogger extends Logger
 		foreach ( $post_data_diff as $diff_key => $diff_values ) {
 			$context[ "post_prev_{$diff_key}" ] = $diff_values['old'];
 			$context[ "post_new_{$diff_key}" ] = $diff_values['new'];
-
-			// If post_author then get more author info,
-			// because just a user ID does not get us far.
-			if ( 'post_author' === $diff_key ) {
-				$old_author_user = get_userdata( (int) $diff_values['old'] );
-				$new_author_user = get_userdata( (int) $diff_values['new'] );
-
-				if ( is_a( $old_author_user, 'WP_User' ) && is_a( $new_author_user, 'WP_User' ) ) {
-					$context[ "post_prev_{$diff_key}/user_login" ] = $old_author_user->user_login;
-					$context[ "post_prev_{$diff_key}/user_email" ] = $old_author_user->user_email;
-					$context[ "post_prev_{$diff_key}/display_name" ] = $old_author_user->display_name;
-
-					$context[ "post_new_{$diff_key}/user_login" ] = $new_author_user->user_login;
-					$context[ "post_new_{$diff_key}/user_email" ] = $new_author_user->user_email;
-					$context[ "post_new_{$diff_key}/display_name" ] = $new_author_user->display_name;
-				}
-			}
 		}
 
 		$arr_meta_keys_to_ignore = array(
@@ -288,6 +303,35 @@ class PostLogger extends Logger
 		$old_meta = isset( $old_post_data['post_meta'] ) ? (array) $old_post_data['post_meta'] : array();
 		$new_meta = isset( $new_post_data['post_meta'] ) ? (array) $new_post_data['post_meta'] : array();
 
+		if($new_meta !== $old_meta)
+		{
+			$arr_diff = \LiveuEventsLog\Helpers\ArrayDiffMultidimensional::strictComparison($new_meta, $old_meta);
+			var_dump($arr_diff);
+			foreach ($arr_diff as $key => $value)
+			{
+				if(is_array($value))
+				{
+					foreach ($value as $value_key => $value_item)
+					{
+						var_dump($value_key);
+					}
+				}
+				else
+				{
+					var_dump($key);
+				}
+			}
+			die();
+		}
+
+
+		//var_dump($old_meta);
+		//var_dump('<br/>#######################################################<br/>');
+		//var_dump($new_meta);
+		//die();
+
+
+		/*
 		$context = $this->add_post_thumb_diff( $context, $old_meta, $new_meta );
 
 		// Remove fields that we have checked already and other that should be ignored.
@@ -310,6 +354,7 @@ class PostLogger extends Logger
 			}
 		}
 
+
 		if ( $meta_changes['added'] ) {
 			$context['post_meta_added'] = count( $meta_changes['added'] );
 		}
@@ -321,34 +366,13 @@ class PostLogger extends Logger
 		if ( $meta_changes['changed'] ) {
 			$context['post_meta_changed'] = count( $meta_changes['changed'] );
 		}
+		*/
 
-		$old_post_has_password = ! empty( $old_data->post_password );
-		$old_post_password = $old_post_has_password ? $old_data->post_password : null;
-		$old_post_status = $old_data->post_status ?? null;
 
-		$new_post_has_password = ! empty( $new_data->post_password );
-		$new_post_password = $new_post_has_password ? $new_data->post_password : null;
-		$new_post_status = $new_data->post_status ?? null;
 
-		if ( false === $old_post_has_password && 'publish' === $new_post_status && $new_post_has_password ) {
-			$context['post_password_protected'] = true;
-		} elseif (
-			$old_post_has_password &&
-			'publish' === $old_post_status &&
-			false === $new_post_has_password &&
-			'publish' === $new_post_status
-		) {
-			$context['post_password_unprotected'] = true;
-		} elseif ( $old_post_has_password && $new_post_has_password && $old_post_password !== $new_post_password ) {
-			$context['post_password_changed'] = true;
-		} elseif ( 'private' === $new_post_status && 'private' !== $old_post_status ) {
-			$context['post_private'] = true;
 
-			if ( $old_post_has_password ) {
-				$context['post_password_unprotected'] = true;
-			}
-		}
 
+		/*
 		// Todo: detect sticky.
 		// Sticky is stored in option:
 		// $sticky_posts = get_option('sticky_posts');.
@@ -391,9 +415,8 @@ class PostLogger extends Logger
 
 		$context['post_terms_added'] = $term_changes['added'];
 		$context['post_terms_removed'] = $term_changes['removed'];
+		*/
 
-
-		//return apply_filters( 'simple_history/post_logger/context', $context, $old_data, $new_data, $old_meta, $new_meta );
 
 		return $context;
 	}
