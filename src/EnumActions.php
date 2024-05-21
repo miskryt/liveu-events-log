@@ -18,25 +18,25 @@ abstract class EnumActions
 	public static function get(int $id) {
 		switch ($id){
 			case 1:
-				return "Create";
+				return "Created";
 			break;
 			case 2:
-				return "Publish";
+				return "Published";
 			break;
 			case 3:
-				return "Update";
+				return "Updated";
 			break;
 			case 4:
-				return "Trash";
+				return "Trashed";
 			break;
 			case 5:
-				return "Delete";
+				return "Deleted";
 			break;
 			case 6:
-				return "Draft";
+				return "Drafted";
 			break;
 			case 7:
-				return "Restore";
+				return "Restored";
 			break;
 			default:
 				return "";

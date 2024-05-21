@@ -1,9 +1,9 @@
 <?php
 namespace LiveuEventsLog\Loggers;
 
-use App\Submissions\Helpers;
 use LiveuEventsLog\EnumActions;
 use LiveuEventsLog\EnumLevels;
+use LiveuEventsLog\Helpers\ArrayDiffMultidimensional;
 use LiveuEventsLog\Helpers\DiffParser;
 
 class PostLogger extends Logger
@@ -225,52 +225,24 @@ class PostLogger extends Logger
 		}
 	}
 
-	private function check_diff_multi($array1, $array2){
-		$result = array();
-
-		foreach($array1 as $key => $val)
-		{
-			if(isset($array2[$key]))
-			{
-				if(is_array($val)  && is_array($array2[$key]))
-				{
-					$result[$key] = $this->check_diff_multi($val, $array2[$key]);
-				}
-			}
-			else
-			{
-				$result[$key] = $val;
-			}
-		}
-
-		return $result;
-	}
-
 
 	public function add_post_data_diff_to_context( $context, $old_post_data, $new_post_data ) {
 		$old_data = $old_post_data['post_data'];
 		$new_data = $new_post_data['post_data'];
 
 
-		// Will contain the differences.
 		$post_data_diff = array();
 
 		$arr_keys_to_diff = array(
 			'post_title',
-			'post_name',
 			'post_content',
-			'post_status',
-			'menu_order',
-			'post_date',
-			'post_date_gmt',
-			'post_excerpt',
-			'comment_status',
-			'ping_status',
-			'post_parent', // only id, need to get context for that, like name of parent at least?
-			'post_author', // only id, need to get more info for user.
 		);
 
-		//$arr_keys_to_diff = $this->add_keys_to_diff( $arr_keys_to_diff );
+		$disabled_acf_keys = [
+			'_edit_lock',
+			'_pingme',
+			'_encloseme'
+		];
 
 		foreach ( $arr_keys_to_diff as $key ) {
 			if ( isset( $old_data->$key ) && isset( $new_data->$key ) ) {
@@ -278,145 +250,29 @@ class PostLogger extends Logger
 			}
 		}
 
-		// If changes where detected.
-		// Save at least 2 values for each detected value change, i.e. the old value and the new value.
 		foreach ( $post_data_diff as $diff_key => $diff_values ) {
-			$context[ "post_prev_{$diff_key}" ] = $diff_values['old'];
-			$context[ "post_new_{$diff_key}" ] = $diff_values['new'];
+			$context[ "prev#{$diff_key}" ] = $diff_values['old'];
+			$context[ "new#{$diff_key}" ] = $diff_values['new'];
 		}
 
-		$arr_meta_keys_to_ignore = array(
-			'_edit_lock',
-			'_edit_last',
-			'_post_restored_from',
-			'_wp_page_template',
-			'_thumbnail_id',
-			'_encloseme',
-		);
 
-		$meta_changes = array(
-			'added' => array(),
-			'removed' => array(),
-			'changed' => array(),
-		);
 
 		$old_meta = isset( $old_post_data['post_meta'] ) ? (array) $old_post_data['post_meta'] : array();
 		$new_meta = isset( $new_post_data['post_meta'] ) ? (array) $new_post_data['post_meta'] : array();
 
 		if($new_meta !== $old_meta)
 		{
-			$arr_diff = \LiveuEventsLog\Helpers\ArrayDiffMultidimensional::strictComparison($new_meta, $old_meta);
-			var_dump($arr_diff);
-			foreach ($arr_diff as $key => $value)
+			$arr_diff = ArrayDiffMultidimensional::strictComparison($new_meta, $old_meta);
+
+			foreach ($arr_diff as $field_name => $field_value)
 			{
-				if(is_array($value))
-				{
-					foreach ($value as $value_key => $value_item)
-					{
-						var_dump($value_key);
-					}
-				}
-				else
-				{
-					var_dump($key);
-				}
-			}
-			die();
-		}
+				if(in_array($key, $disabled_acf_keys)) continue;
 
-
-		//var_dump($old_meta);
-		//var_dump('<br/>#######################################################<br/>');
-		//var_dump($new_meta);
-		//die();
-
-
-		/*
-		$context = $this->add_post_thumb_diff( $context, $old_meta, $new_meta );
-
-		// Remove fields that we have checked already and other that should be ignored.
-		foreach ( $arr_meta_keys_to_ignore as $key_to_ignore ) {
-			unset( $old_meta[ $key_to_ignore ] );
-			unset( $new_meta[ $key_to_ignore ] );
-		}
-
-		// Look for added custom fields/meta.
-		foreach ( $new_meta as $meta_key => $meta_value ) {
-			if ( ! isset( $old_meta[ $meta_key ] ) ) {
-				$meta_changes['added'][ $meta_key ] = true;
+				//var_dump($field_name);die();
+				$context[ "prev#{$field_name}" ] = $old_meta[$field_name];
+				$context[ "new#{$field_name}" ] = $new_meta[$field_name];
 			}
 		}
-
-		// Look for changed custom fields/meta.
-		foreach ( $old_meta as $meta_key => $meta_value ) {
-			if ( isset( $new_meta[ $meta_key ] ) && json_encode( $old_meta[ $meta_key ] ) !== json_encode( $new_meta[ $meta_key ] ) ) {
-				$meta_changes['changed'][ $meta_key ] = true;
-			}
-		}
-
-
-		if ( $meta_changes['added'] ) {
-			$context['post_meta_added'] = count( $meta_changes['added'] );
-		}
-
-		if ( $meta_changes['removed'] ) {
-			$context['post_meta_removed'] = count( $meta_changes['removed'] );
-		}
-
-		if ( $meta_changes['changed'] ) {
-			$context['post_meta_changed'] = count( $meta_changes['changed'] );
-		}
-		*/
-
-
-
-
-
-		/*
-		// Todo: detect sticky.
-		// Sticky is stored in option:
-		// $sticky_posts = get_option('sticky_posts');.
-
-		// Check for changes in post terms.
-		$old_post_terms = $old_post_data['post_terms'] ?? [];
-		$new_post_terms = $new_post_data['post_terms'] ?? [];
-
-		// Keys to keep for each term: term_id, name, slug, term_taxonomy_id, taxonomy.
-		$term_keys_to_keep = [
-			'term_id',
-			'name',
-			'slug',
-			'term_taxonomy_id',
-			'taxonomy',
-		];
-
-		$old_post_terms = array_map(
-			function ( $term ) use ( $term_keys_to_keep ) {
-				return array_intersect_key( (array) $term, array_flip( $term_keys_to_keep ) );
-			},
-			$old_post_terms
-		);
-
-		$new_post_terms = array_map(
-			function ( $term ) use ( $term_keys_to_keep ) {
-				return array_intersect_key( (array) $term, array_flip( $term_keys_to_keep ) );
-			},
-			$new_post_terms
-		);
-
-		$term_changes = [
-			'added' => [],
-			'removed' => [],
-		];
-
-		$term_changes['added'] = array_values( array_udiff( $new_post_terms, $old_post_terms, [ $this, 'compare_terms' ] ) );
-		$term_changes['removed'] = array_values( array_udiff( $old_post_terms, $new_post_terms, [ $this, 'compare_terms' ] ) );
-
-
-		$context['post_terms_added'] = $term_changes['added'];
-		$context['post_terms_removed'] = $term_changes['removed'];
-		*/
-
 
 		return $context;
 	}
@@ -432,35 +288,6 @@ class PostLogger extends Logger
 		return $post_data_diff;
 	}
 
-	public function add_post_thumb_diff( $context, $old_meta, $new_meta ) {
-		$prev_post_thumb_id = null;
-		$new_post_thumb_id = null;
-
-		// If it was changed from one image to another.
-		if ( isset( $old_meta['_thumbnail_id'][0] ) && isset( $new_meta['_thumbnail_id'][0] ) ) {
-			if ( $old_meta['_thumbnail_id'][0] !== $new_meta['_thumbnail_id'][0] ) {
-				$prev_post_thumb_id = $old_meta['_thumbnail_id'][0];
-				$new_post_thumb_id = $new_meta['_thumbnail_id'][0];
-			}
-		} elseif ( isset( $old_meta['_thumbnail_id'][0] ) ) {
-			// Featured image id did not exist on both new and old data. But on any?
-			$prev_post_thumb_id = $old_meta['_thumbnail_id'][0];
-		} elseif ( isset( $new_meta['_thumbnail_id'][0] ) ) {
-			$new_post_thumb_id = $new_meta['_thumbnail_id'][0];
-		}
-
-		if ( $prev_post_thumb_id ) {
-			$context['post_prev_thumb_id'] = $prev_post_thumb_id;
-			$context['post_prev_thumb_title'] = get_the_title( $prev_post_thumb_id );
-		}
-
-		if ( $new_post_thumb_id ) {
-			$context['post_new_thumb_id'] = $new_post_thumb_id;
-			$context['post_new_thumb_title'] = get_the_title( $new_post_thumb_id );
-		}
-
-		return $context;
-	}
 
 	private function append_context( $event_id, $context ) {
 		global $wpdb;
@@ -509,148 +336,17 @@ class PostLogger extends Logger
 		}
 	}
 
-	public function get_event_details_output (array $event): string
+	public function get_event_details (array $event)
 	{
 		$context = $event['context'];
 		$message = $event['message'];
 
 		$out = '';
 
-		if( 'post_updated' === $message ) {
-
-			$diff_table_output = '';
-			$has_diff_values = false;
-
-			foreach ( $context as $key => $val ) {
-
-				if ( strpos( $key, 'post_prev_' ) !== false ) {
-					$key_to_diff = substr( $key, strlen( 'post_prev_' ) );
-					$key_for_new_val = "post_new_{$key_to_diff}";
-
-					if ( isset( $context[ $key_for_new_val ] ) ) {
-						$post_old_value = $context[ $key ];
-						$post_new_value = $context[ $key_for_new_val ];
-
-						if ( $post_old_value !== $post_new_value ) {
-							if ( 'post_title' === $key_to_diff ) {
-								$has_diff_values = true;
-								$label = 'Title';
-
-								$diff_table_output .= sprintf(
-									'<tr><td>%1$s</td><td>%2$s</td></tr>',
-									$label,
-									DiffParser::text_diff( $post_old_value, $post_new_value )
-								);
-							}
-							elseif ( 'post_content' === $key_to_diff ) {
-								$has_diff_values = true;
-								$label = 'Content';
-
-								$key_text_diff = DiffParser::text_diff( $post_old_value, $post_new_value );
-
-								if ( $key_text_diff ) {
-									$diff_table_output .= sprintf(
-										'<tr><td>%1$s</td><td>%2$s</td></tr>',
-										$label,
-										$key_text_diff
-									);
-								}
-							}
-							elseif ( 'post_status' === $key_to_diff ) {
-								$has_diff_values = true;
-								$label = 'Status';
-
-								$diff_table_output .= sprintf(
-									'<tr>
-										<td>%1$s</td>
-										<td>Changed from %2$s to %3$s</td>
-									</tr>',
-									$label,
-									esc_html( $post_old_value ),
-									esc_html( $post_new_value )
-								);
-							}
-							elseif ( 'post_date' === $key_to_diff ) {
-								$has_diff_values = true;
-								$label = 'Publish date';
-
-								$diff_table_output .= sprintf(
-									'<tr>
-										<td>%1$s</td>
-										<td>Changed from %2$s to %3$s</td>
-									</tr>',
-									$label,
-									esc_html( $post_old_value ),
-									esc_html( $post_new_value )
-								);
-							}
-							elseif ( 'post_name' === $key_to_diff ) {
-								$has_diff_values = true;
-								$label = 'Permalink';
-
-								// $diff = new FineDiff($post_old_value, $post_new_value, FineDiff::$wordGranularity);
-								$diff_table_output .= sprintf(
-									'<tr>
-										<td>%1$s</td>
-										<td>%2$s</td>
-									</tr>',
-									$label,
-									DiffParser::text_diff( $post_old_value, $post_new_value )
-								);
-							}
-						}
-					}
-				}
-			}
-
-			if (
-				isset( $context['post_meta_added'] ) ||
-				isset( $context['post_meta_removed'] ) ||
-				isset( $context['post_meta_changed'] )
-			) {
-				$meta_changed_out = '';
-				$has_diff_values = true;
-
-				if ( isset( $context['post_meta_added'] ) ) {
-					$meta_changed_out .=
-						"<span class=''>" .
-						(int) $context['post_meta_added'] .
-						' added</span> ';
-				}
-
-				if ( isset( $context['post_meta_removed'] ) ) {
-					$meta_changed_out .=
-						"<span class=''>" .
-						(int) $context['post_meta_removed'] .
-						' removed</span> ';
-				}
-
-				if ( isset( $context['post_meta_changed'] ) ) {
-					$meta_changed_out .=
-						"<span class=''>" .
-						(int) $context['post_meta_changed'] .
-						' changed</span> ';
-				}
-
-				$diff_table_output .= sprintf(
-					'<tr>
-						<td>%1$s</td>
-						<td>%2$s</td>
-					</tr>',
-					'Custom fields',
-					$meta_changed_out
-				);
-			}
-
-			if ( $has_diff_values || $diff_table_output ) {
-				$diff_table_output =
-					'<table class="SimpleHistoryLogitem__keyValueTable">' . $diff_table_output . '</table>';
-			}
-
-			$out .= $diff_table_output;
+		if( 'post_updated' === $message )
+		{
+			return $context;
 		}
-
-		return $out;
 	}
 
 	public function compare_terms( $a, $b ) {

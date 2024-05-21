@@ -3,6 +3,7 @@ namespace LiveuEventsLog\Admin\Api;
 
 use LiveuEventsLog\Admin\Model\Model;
 use LiveuEventsLog\EnumActions;
+use LiveuEventsLog\Helpers\DiffParser;
 use LiveuEventsLog\Plugin;
 
 
@@ -75,6 +76,81 @@ class Api
 		return $data;
 	}
 
+	public function get_event_diff_table($id) {
+		$diff_table_output = '';
+
+		$event = $this->model->get_event($id);
+
+		$context = $event->context;
+		foreach ($context as $key => $value)
+		{
+			if($key === 'post_title') continue;
+			if($key === 'post_id') continue;
+			if($key === 'post_type') continue;
+
+
+			$key_to_diff = substr( $key, strlen( 'prev#' ) );
+			$key_for_new_val = "new#{$key_to_diff}";
+
+			if ( isset( $context[ $key_for_new_val ] ) )
+			{
+				$old_value = $context[ $key ];
+				$new_value = $context[ $key_for_new_val ];
+
+				if ( $old_value !== $new_value )
+				{
+					$diff_table_output .= sprintf(
+						'<tr><td>%1$s</td><td>%2$s</td></tr>',
+						substr($key, strpos($key, "#")+1),
+						DiffParser::text_diff( $old_value, $new_value )
+					);
+				}
+			}
+		}
+
+		return $diff_table_output;
+	}
+
+	public function get_event_details($id) {
+
+		$event = $this->model->get_event($id);
+
+		if( $post = get_post($event->post_id) )
+		{
+			$d = [
+				"id" => $event->id,
+				"user" => get_user_by('id', $event->user_id)->user_login,
+				"action" => EnumActions::get($event->action),
+				"post_url" =>
+					'<a  href="?page=liveu-events&action=show_diff&event_id=' . $event->id . '">' .
+					get_post($event->post_id)->post_title .
+					'</a>&nbsp;<a target="_blank" href="' . get_edit_post_link($event->post_id) . '"><i class="levlog-list-share-icon iconoir-open-in-window"></i></a>',
+
+				"date" => $event->date,
+				"post_type" => $event->post_type,
+				"post_id" => $event->post_id,
+			];
+		}
+		else
+		{
+			$d = [
+				"id" => $event->id,
+				"user" => get_user_by('id', $event->user_id)->user_login,
+				"action" => EnumActions::get($event->action),
+				"post_url" =>
+					'<a  href="?page=liveu-events&action=show_diff&event_id=' . $event->id . '">' .
+					$post_data[2]['value'] . "(ID {$post_data[0]['value']} completely deleted)" .
+					'</a>',
+
+				"date" => $event->date,
+				"post_type" => $event->post_type,
+				"new" => $event->new,
+			];
+		}
+
+		return $d;
+	}
+
 	public function get_events_list_callback() {
 		check_ajax_referer( 'myajax-nonce', 'nonce_code' );
 
@@ -128,10 +204,13 @@ class Api
 		return $data;
 	}
 
-	public function get_diff_table_by_id(int $id): string {
+	public function get_event_details111(int $id) {
 		$event = $this->model->get_event($id);
 
-		return $this->plugin->get_instantiated_logger_by_slug( $event['logger'] )->get_event_details_output($event );
+		return [
+			'event' => $event,
+			'context' => $this->plugin->get_instantiated_logger_by_slug( $event['logger'] )->get_event_details($event)
+			];
 	}
 
 	public function set_event_viewed(int $id) {

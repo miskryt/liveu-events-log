@@ -26,9 +26,13 @@ class AdminPage
 
 	    if(isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'show_diff')
 		{
-			$diff_table = $this->api->get_diff_table_by_id((int)$_REQUEST['event_id']);
+			$event_details = $this->api->get_event_details((int)$_REQUEST['event_id']);
+			$diff_data = $this->api->get_event_diff_table((int)$_REQUEST['event_id']);
+
 			$this->api->set_event_viewed((int)$_REQUEST['event_id']);
-			$data[] = $diff_table;
+
+			$data['event'] = $event_details;
+			$data['diff_data'] = $diff_data;
 
 			$this->viewer->render('templates/diff', $data);
 		}

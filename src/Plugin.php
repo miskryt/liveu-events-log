@@ -61,19 +61,23 @@ class Plugin {
 			return;
 		}
 
-		wp_enqueue_script('datatables-js', LEVLOG_PLUGIN_URL. '/assets/admin/lib/datatables/datatables.js');
-		wp_enqueue_script('levlog-admin-js', LEVLOG_PLUGIN_URL. '/assets/admin/js/levlog-admin.js', );
+		wp_enqueue_script('bootstrap-js', LEVLOG_PLUGIN_URL. '/assets/admin/lib/bootstrap-5.3.3-dist/js/bootstrap.js');
+		//wp_enqueue_script('datatables-js', LEVLOG_PLUGIN_URL. '/assets/admin/lib/datatables/datatables.js');
+		//wp_enqueue_script('levlog-admin-js', LEVLOG_PLUGIN_URL. '/assets/admin/js/levlog-admin.js', );
 
+		/*
 		wp_localize_script( 'levlog-admin-js', 'myajax',
 			array(
 				'nonce' => wp_create_nonce('myajax-nonce')
 			)
 		);
+		*/
 
 	}
 
 	public function enqueue_admin_styles() {
-		wp_enqueue_style('datatables-css', LEVLOG_PLUGIN_URL. '/assets/admin/lib/datatables/datatables.css');
+		//wp_enqueue_style('datatables-css', LEVLOG_PLUGIN_URL. '/assets/admin/lib/datatables/datatables.css');
+		wp_enqueue_style('bootstrap-css', LEVLOG_PLUGIN_URL. '/assets/admin/lib/bootstrap-5.3.3-dist/css/bootstrap.css');
 		wp_enqueue_style('iconoir-css', 'https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css');
 		wp_enqueue_style('plugin-css', LEVLOG_PLUGIN_URL. '/assets/admin/css/plugin.css');
 	}
