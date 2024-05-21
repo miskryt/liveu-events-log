@@ -78,10 +78,9 @@ class Api
 
 	public function get_event_diff_table($id) {
 		$diff_table_output = '';
-
 		$event = $this->model->get_event($id);
-
 		$context = $event->context;
+
 		foreach ($context as $key => $value)
 		{
 			if($key === 'post_title') continue;
@@ -99,9 +98,22 @@ class Api
 
 				if ( $old_value !== $new_value )
 				{
+					$field = substr($key, strpos($key, "#")+1);
+
+					if(strpos($field, '_') === 0) continue;
+
+					$label = $field;
+
+					$acf_object = get_field_object(substr($key, strpos($key, "#")+1), $event->post_id);
+
+					if(!empty($acf_object))
+					{
+						$label = $acf_object['label'] . ' <span style="font-size: 9px">(' . $field . ')</span>';
+					}
+
 					$diff_table_output .= sprintf(
 						'<tr><td>%1$s</td><td>%2$s</td></tr>',
-						substr($key, strpos($key, "#")+1),
+						$label,
 						DiffParser::text_diff( $old_value, $new_value )
 					);
 				}

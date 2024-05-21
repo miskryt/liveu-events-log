@@ -268,7 +268,7 @@ class PostLogger extends Logger
 			{
 				if(in_array($key, $disabled_acf_keys)) continue;
 
-				//var_dump($field_name);die();
+				var_dump(acf_get_field_label($old_meta[$field_name]));
 				$context[ "prev#{$field_name}" ] = $old_meta[$field_name];
 				$context[ "new#{$field_name}" ] = $new_meta[$field_name];
 			}
