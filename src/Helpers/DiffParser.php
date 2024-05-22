@@ -42,10 +42,10 @@ class DiffParser {
 
 		$r = '';
 
-		$r .= "<div class='SimpleHistory__diff__contents' tabindex='0'>";
-		$r .= "<div class='SimpleHistory__diff__contentsInner'>";
+		$r .= "<div class='' tabindex='0'>";
+		$r .= "<div class=''>";
 
-		$r .= "<table class='diff SimpleHistory__diff'>\n";
+		$r .= "<table class='diff'>\n";
 
 		if ( ! empty( $args['show_split_view'] ) ) {
 			$r .=

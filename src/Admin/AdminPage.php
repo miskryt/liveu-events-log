@@ -13,6 +13,12 @@ class AdminPage
 	public function __construct(Api $api, IView $viewer) {
 		$this->viewer = $viewer;
 		$this->api = $api;
+
+		add_filter( 'handle_bulk_actions-'.'set_read', [$this, 'my_bulk_action_handler'], 10, 3 );
+	}
+
+	public function my_bulk_action_handler() {
+
 	}
 
 	public function set_table(AdminListTable $table) {
@@ -29,7 +35,7 @@ class AdminPage
 			$event_details = $this->api->get_event_details((int)$_REQUEST['event_id']);
 			$diff_data = $this->api->get_event_diff_table((int)$_REQUEST['event_id']);
 
-			$this->api->set_event_viewed((int)$_REQUEST['event_id']);
+			$this->api->set_events_viewed([(int)$_REQUEST['event_id']]);
 
 			$data['event'] = $event_details;
 			$data['diff_data'] = $diff_data;
@@ -38,6 +44,19 @@ class AdminPage
 		}
 		else
 		{
+			if( isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'set_read' )
+			{
+				$events_ids = array_map('absint',$_REQUEST['events']);
+				$this->api->set_events_viewed($events_ids);
+			}
+
+			if( isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'delete' )
+			{
+				$events_ids = array_map('absint',$_REQUEST['events']);
+
+				$this->api->delete_events($events_ids);
+			}
+
 			$data['table'] = $this->admin_table;
 			$this->viewer->render('templates/admin', $data);
 		}

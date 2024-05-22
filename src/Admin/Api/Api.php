@@ -216,20 +216,26 @@ class Api
 		return $data;
 	}
 
-	public function get_event_details111(int $id) {
-		$event = $this->model->get_event($id);
-
-		return [
-			'event' => $event,
-			'context' => $this->plugin->get_instantiated_logger_by_slug( $event['logger'] )->get_event_details($event)
-			];
-	}
-
-	public function set_event_viewed(int $id) {
+	public function set_events_viewed(array $ids) {
 		global $wpdb;
 		$table = EVENTS_DATABASE_TABLE;
 
-		$wpdb->update($table, [ 'new' => 0 ], ["id" => $id]);
+		$wpdb->query(
+			"UPDATE $table SET `new` = 0
+			WHERE ID IN (". implode(',', array_map('absint',$ids) ) .")"
+		);
+	}
+
+	public function delete_events(array $ids) {
+		global $wpdb;
+		$events_table = EVENTS_DATABASE_TABLE;
+		$context_table = EVENTS_CONTEXT_TABLE;
+
+		$ids = implode( ',', array_map( 'absint', $ids ) );
+
+		if($wpdb->query( "DELETE FROM $context_table WHERE event_id IN($ids)" )){
+			$wpdb->query( "DELETE FROM $events_table WHERE ID IN($ids)" );
+		}
 	}
 
 }

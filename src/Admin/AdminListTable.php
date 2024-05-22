@@ -37,7 +37,8 @@ class AdminListTable extends WP_List_Table
 		];
 	}
 
-	function get_columns() {
+	function get_columns(): array
+	{
 		$columns = array(
 			'cb'  => '<input type="checkbox" />',
 			'user' => 'User',
@@ -51,12 +52,13 @@ class AdminListTable extends WP_List_Table
 		return $columns;
 	}
 
-	function column_cb ($item)
+	public function column_cb ($item)
 	{
-		return sprintf('<input type="checkbox" name="event" value="%s" />', $item['id']);
+		return sprintf('<input type="checkbox" name="events[]" value="%s" />', $item['id']);
 	}
 
-	function column_default( $item, $column_name ) {
+	function column_default( $item, $column_name ): string
+	{
 
 		$cssClass = ($item['new'] === '1') ? 'event-unread' : '';
 
@@ -72,7 +74,7 @@ class AdminListTable extends WP_List_Table
 		}
 	}
 
-	function prepare_items() {
+	public function prepare_items() {
 
 		$this->table_data = $this->get_table_data();
 
@@ -85,21 +87,15 @@ class AdminListTable extends WP_List_Table
 		$this->items = $this->table_data;
 	}
 
-	private function get_table_data() {
+	private function get_table_data(): array
+	{
 		global $wpdb;
+
+		$paged = 1;
+		$per_page = 10;
 
 		$order_by = sanitize_sql_orderby(isset($_REQUEST['orderby']) ? trim($_REQUEST['orderby']) : null);
 		$order = sanitize_sql_orderby(isset($_REQUEST['order']) ?  trim($_REQUEST['order']) : 'desc');
-
-		$start = 0;
-		$length = 10;
-		$paged = 1;
-
-		if(isset($_REQUEST['start']))
-			$start = (int)$_REQUEST['start'];
-
-		if(isset($_REQUEST['length']))
-			$length = (int)$_REQUEST['length'];
 
 		if(isset($_REQUEST['paged']))
 			$paged = (int)$_REQUEST['paged'];
@@ -109,9 +105,6 @@ class AdminListTable extends WP_List_Table
 
 		if(empty($order))
 			$order = 'desc';
-
-		$per_page = 10;
-
 
 		$params = [
 			'order_by' => $order_by,
@@ -128,10 +121,11 @@ class AdminListTable extends WP_List_Table
 		return $this->api->get_events_list($params);
 	}
 
-	public function get_bulk_actions ()
+	public function get_bulk_actions (): array
 	{
 		return [
-			'set_read' => "Mark as read"
+			'set_read' => "Mark as read",
+			'delete' => "Delete"
 		];
 	}
 
