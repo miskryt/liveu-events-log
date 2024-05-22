@@ -226,6 +226,16 @@ class Api
 		);
 	}
 
+	public function set_events_not_viewed(array $ids) {
+		global $wpdb;
+		$table = EVENTS_DATABASE_TABLE;
+
+		$wpdb->query(
+			"UPDATE $table SET `new` = 1
+			WHERE ID IN (". implode(',', array_map('absint',$ids) ) .")"
+		);
+	}
+
 	public function delete_events(array $ids) {
 		global $wpdb;
 		$events_table = EVENTS_DATABASE_TABLE;

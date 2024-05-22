@@ -6,7 +6,7 @@ namespace LiveuEventsLog;
  * Plugin Name: LiveuEventsLog
  * Plugin URI: https://example.com/
  * Description: Log events.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Solvd Inc
  * Author URI: https://solvd.com
  * Text Domain: LiveuEventsLog

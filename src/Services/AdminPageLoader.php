@@ -51,8 +51,9 @@ class AdminPageLoader extends Service
 
 	public function AdminListTable_load(){
 
-		$table = new AdminListTable($this->api);
+		$this->admin_page->loaded();
+		//$table = new AdminListTable($this->api);
 
-		$this->admin_page->set_table($table);
+		//$this->admin_page->set_table($table);
 	}
 }

@@ -125,6 +125,7 @@ class AdminListTable extends WP_List_Table
 	{
 		return [
 			'set_read' => "Mark as read",
+			'set_unread' => "Mark as unread",
 			'delete' => "Delete"
 		];
 	}

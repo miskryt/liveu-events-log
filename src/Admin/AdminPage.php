@@ -13,16 +13,14 @@ class AdminPage
 	public function __construct(Api $api, IView $viewer) {
 		$this->viewer = $viewer;
 		$this->api = $api;
-
-		add_filter( 'handle_bulk_actions-'.'set_read', [$this, 'my_bulk_action_handler'], 10, 3 );
 	}
 
-	public function my_bulk_action_handler() {
-
+	public function loaded(){
+		$this->load_table();
 	}
 
-	public function set_table(AdminListTable $table) {
-		$this->admin_table = $table;
+	private function load_table() {
+		$this->admin_table = new AdminListTable($this->api);
 	}
 
 	public function show_admin_page(): void {
@@ -50,12 +48,19 @@ class AdminPage
 				$this->api->set_events_viewed($events_ids);
 			}
 
+			if( isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'set_unread' )
+			{
+				$events_ids = array_map('absint',$_REQUEST['events']);
+				$this->api->set_events_not_viewed($events_ids);
+			}
+
 			if( isset($_REQUEST['action']) &&  $_REQUEST['action'] === 'delete' )
 			{
 				$events_ids = array_map('absint',$_REQUEST['events']);
-
 				$this->api->delete_events($events_ids);
 			}
+
+			$this->load_table();
 
 			$data['table'] = $this->admin_table;
 			$this->viewer->render('templates/admin', $data);
