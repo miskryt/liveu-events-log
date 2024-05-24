@@ -53,8 +53,8 @@ class Api
 			}
 			else
 			{
-				$post_data = $this->model->get_event_context($event->id);
-				//var_dump($post_data[0]['value']);
+				$post_data = $this->model->get_event_context($event->id, ARRAY_A);
+				//var_dump($post_data);die();
 				$d = [
 					"id" => $event->id,
 					"user" => get_user_by('id', $event->user_id)->user_login,
@@ -145,6 +145,8 @@ class Api
 		}
 		else
 		{
+			$post_data = $this->model->get_event_context($event->id, ARRAY_A);
+
 			$d = [
 				"id" => $event->id,
 				"user" => get_user_by('id', $event->user_id)->user_login,

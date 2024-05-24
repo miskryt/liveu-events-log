@@ -21,9 +21,11 @@ Date: <?=$event['date']?>
 <br/>
 <br/>
 
+<?php if(isset($event['post_id'])):?>
 <a target="_blank" href="<?=get_edit_post_link($event['post_id'])?>">
 	<?=get_post($event['post_id'])->post_title?>
 </a>
+<?php endif;?>
 
 <br/>
 <br/>
